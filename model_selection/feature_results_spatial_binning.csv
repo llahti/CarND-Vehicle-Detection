@@ -1,0 +1,4 @@
+,training_time,test_time,n_train,n_test,score,feat_vect_length,error,error_msg,color_space,orient,pix_per_cell,cell_per_block,hog_channel,spatial_size,hist_bins,spatial_feat,hist_feat,hog_feat
+0,0.6486992835998535,0.011332988739013672,1624,697,0.981348637016,3396,False,,YUV,9,8,3,1,"(12, 12)",16,True,True,True
+1,0.7224311828613281,0.011121511459350586,1624,697,0.982783357245,3552,False,,YUV,9,8,3,1,"(14, 14)",16,True,True,True
+2,0.7368655204772949,0.011162757873535156,1624,697,0.984218077475,3936,False,,YUV,9,8,3,1,"(18, 18)",16,True,True,True
