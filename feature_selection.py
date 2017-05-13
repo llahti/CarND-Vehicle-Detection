@@ -1,22 +1,16 @@
 # This code is based on udacity example
 # https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/2b62a1c3-e151-4a0e-b6b6-e424fa46ceab/lessons/fd66c083-4ccb-4fe3-bda1-c29db76f50a0/concepts/40ac880a-7ccc-4145-a864-6b0b99ea31e9
 
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
-import numpy as np
-import cv2
-import glob
+
 import time
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedShuffleSplit
-from skimage.feature import hog
 from lesson_functions import *
 from sklearn.model_selection import train_test_split
 from dataset import *
 from utils import *
-import itertools
 import pandas as pd
 import tqdm
 
@@ -75,19 +69,23 @@ def single_img_features(img, color_space='RGB', spatial_size=(32, 32),
     return np.concatenate(img_features)
 
 
-### Tweak these parameters and see how the results change.
+save_results = True
+filename = './model_selection/feature_results_temp.csv'
 
-images, y = load_small()
+
+images, y = load_full()
 
 # Get different parameter combinations
+# Tweak these parameters and see how the results change.
 # It is advisable to try out only with few different parameter combinations
-# to save time and get an idea what are paramter ranges should be fine tuned
+# to save time and get an idea what are parameter ranges should be fine tuned
 #
-save_results = True
-filename = './model_selection/feature_results_final.csv'
-combinations = create_parameter_combinations(color_space=['LUV', 'YUV', 'YCrCb'], orient=[5, 6, 7], pix_per_cell=[15, 16, 17],
-                                             cell_per_block=[2, 3, 4], spatial_size=((15,15), (16,16), (17,17) ),
+
+combinations = create_parameter_combinations(color_space=['LUV', 'YCrCb'], orient=[4, 5, 6], pix_per_cell=[13, 14, 15],
+                                             cell_per_block=[2, 3, 4], spatial_size=((14,14), (15,15), (16,16), ),
                                              hist_bins=[256, ], hog_channel=[0, 1, 2, 'ALL'], hog_feat=[True, ], hist_feat=[True,], spatial_feat=[True,])
+
+
 
 # Create result table with indexes from combination tables
 results = pd.DataFrame(index=combinations.index, columns=('training_time', 'test_time', 'n_train', 'n_test', 'score', 'feat_vect_length','error', 'error_msg'))
@@ -116,7 +114,7 @@ for i in tqdm.tqdm(range(len(combinations))):
         rand_state = 888
         X_train, X_test, y_train, y_test = train_test_split(
             scaled_X, y, test_size=0.3, random_state=rand_state)
-        sss = StratifiedShuffleSplit(n_splits=5, test_size=0.3, random_state=888)
+        sss = StratifiedShuffleSplit(n_splits=3, test_size=0.3, random_state=888)
 
         # Use a linear SVC
         svc = LinearSVC()
@@ -145,7 +143,6 @@ for i in tqdm.tqdm(range(len(combinations))):
     if ((i % 50) == 0) & save_results:
         all = results.join(combinations)
         all.to_csv(filename)
-        # combinations.to_csv('./model_selection/feature_combinations.csv')
 
 # Save final results
 if save_results:
