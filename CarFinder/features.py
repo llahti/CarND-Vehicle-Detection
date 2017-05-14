@@ -161,29 +161,12 @@ if __name__ == "__main__":
     from sklearn.preprocessing import StandardScaler
     from sklearn.svm import SVC
 
-    base_path = utils.get_module_path()
-    vehicles_pattern = base_path + '/test_images/vehicles/*.png'
-    nonvehicles_pattern = base_path + '/test_images/nonvehicles/*.png'
-
-
-
-    # Load image paths
-    print("Reading test vehicle test images from path:", vehicles_pattern)
-    vehicles = glob.glob(vehicles_pattern,
-                         recursive=True)
-    print("Read {} images".format(len(vehicles)))
-    print("Reading non-vehicle test images from path:", nonvehicles_pattern)
-    nonvehicles = glob.glob(nonvehicles_pattern,
-                            recursive=True)
-    print("Read {} images".format(len(nonvehicles)))
-
-    features, labels = utils.load_images(vehicles, nonvehicles)
-    print("Totally loaded {} images to training set".format(len(labels)))
+    images, labels = utils.load_test_images()
 
     f = Features()
 
     print("Extracting features... ", end='')
-    features = f.extract_features(features)
+    features = f.extract_features(images)
     # Ensure that features are float64
     X = np.array(features).astype(np.float64)
     # Fit a per-column scaler
