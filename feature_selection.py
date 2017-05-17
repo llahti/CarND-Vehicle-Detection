@@ -7,7 +7,7 @@ https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95
 """
 
 import time
-from sklearn.svm import LinearSVC
+from sklearn.svm import LinearSVC, SVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -31,8 +31,8 @@ images, y = load_full()
 # to save time and get an idea what are parameter ranges should be fine tuned
 #
 
-combinations = create_parameter_combinations(color_space=['LUV', 'YCrCb'], orient=[4, 5, 6], pix_per_cell=[13, 14, 15],
-                                             cell_per_block=[2, 3, 4], spatial_size=((14,14), (15,15), (16,16), ),
+combinations = create_parameter_combinations(color_space=['LUV'], orient=[5, 6, 7], pix_per_cell=[14, 15, 16],
+                                             cell_per_block=[2, 3, 4], spatial_size=((15,15), (16,16), ),
                                              hist_bins=[256, ], hog_channel=[0, 1, 2, 'ALL'], hog_feat=[True, ], hist_feat=[True,], spatial_feat=[True,])
 
 
@@ -64,10 +64,11 @@ for i in tqdm.tqdm(range(len(combinations))):
         rand_state = 888
         X_train, X_test, y_train, y_test = train_test_split(
             scaled_X, y, test_size=0.3, random_state=rand_state)
-        sss = StratifiedShuffleSplit(n_splits=3, test_size=0.3, random_state=888)
+        sss = StratifiedShuffleSplit(n_splits=5, test_size=0.3, random_state=888)
 
         # Use a linear SVC
-        svc = LinearSVC()
+        #svc = LinearSVC()
+        svc = SVC(kernel='rbf', C=100, gamma=0.0005)
 
         # Check the training time for the SVC
         start_training = time.time()
@@ -81,7 +82,7 @@ for i in tqdm.tqdm(range(len(combinations))):
         end_prediction = time.time()
 
         # Calculate cross valitated score (this is more reliable way)
-        score = cross_val_score(svc, scaled_X, y, cv=sss,n_jobs=2).mean()
+        score = cross_val_score(svc, scaled_X, y, cv=sss, n_jobs=8).mean()
 
         # ('training_time', 'test_time', 'n_train', 'n_test' 'score', 'error', 'error_msg'))
         results.iloc[i] = [(end_training-start_training), (end_prediction-end_training), len(X_train), len(X_test), score, len(features[1]), False, ""]
