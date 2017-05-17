@@ -17,22 +17,28 @@ class Features:
         self.color_space = cv2.COLOR_BGR2LUV
 
         # Defines size of spatial color binning
-        self.spatial_binning_size = (32, 32)
+        self.spatial_binning_size = (15, 15)
 
         # Color histogram parameters
-        self.hist_nbins = 32  # Number of bins
+        self.hist_nbins = 256  # Number of bins
         self.hist_bins_range = (0, 256)  # Range of bins
 
         # HOG parameters
         self.hog_channel = 'ALL'  # Choices: 0, 1, 2, 'ALL'
-        self.orient = 6  # Number of orientation bins
+        self.orient = 5  # Number of orientation bins
         self.pix_per_cell = (16, 16)  # Pixels per HOG-cell
-        self.cell_per_block = (2, 2)  # cells per HOG-block
+        self.cell_per_block = (4, 4)  # cells per HOG-block
 
         # Define what feature vectors to use
         self.spatial_feat = True
         self.hist_feat = True
         self.hog_feat = True
+
+    def bin_spatial(self, img):
+        assert img.dtype == np.float64, "Only np.float64 is supported"
+        spatial_features = cv2.resize(img, self.spatial_binning_size).ravel()
+        # 4) Append features to list
+        return spatial_features
 
     def color_hist(self, img):
         """
@@ -42,6 +48,7 @@ class Features:
         :param img: Feature image
         :return: Concatenated histogram of all 3 color channels
         """
+        assert img.dtype == np.float64, "Only np.float64 is supported"
         # Compute the histogram of the color channels separately
         channel1_hist = np.histogram(img[:, :, 0], bins=self.hist_nbins,
                                      range=self.hist_bins_range)
@@ -57,6 +64,14 @@ class Features:
         # Return the individual histograms, bin_centers and feature vector
         return hist_features
 
+    def convert_colorspace(self, img):
+        # Convert color space
+        if self.color_space:
+            feature_image = cv2.cvtColor(img, self.color_space)
+        else:
+            feature_image = np.copy(img)
+        return feature_image
+
     def get_hog_features(self, img, vis=False, feature_vec=True):
         """
         Define a function to return HOG features and visualization
@@ -66,6 +81,7 @@ class Features:
         :param feature_vec: if True, generate feature vector 
         :return: 
         """
+        assert img.dtype == np.float64, "Only np.float64 is supported"
         # Call with two outputs if vis==True
         if vis:
             features, hog_image = hog(img, orientations=self.orient,
@@ -97,17 +113,15 @@ class Features:
         # 1) Define an empty list to receive features
         img_features = []
 
-        # Convert color space
-        if self.color_space:
-            feature_image = cv2.cvtColor(img, self.color_space)
-        else:
-            feature_image = np.copy(img)
+        feature_image = self.convert_colorspace(img)
+        feature_image = feature_image.astype(dtype=np.float64)
 
         # 3) Compute spatial features if flag is set
         if self.spatial_feat:
-            spatial_features = cv2.resize(img, self.spatial_binning_size).ravel()
+            spatial_features = self.bin_spatial(feature_image)
             # 4) Append features to list
             img_features.append(spatial_features)
+
 
         # 5) Compute histogram features if flag is set
         if self.hist_feat:
@@ -115,6 +129,7 @@ class Features:
 
             # 6) Append features to list
             img_features.append(hist_features)
+
 
         # 7) Compute HOG features if flag is set
         if self.hog_feat:
@@ -132,7 +147,8 @@ class Features:
             img_features.append(hog_features)
 
         # 9) Return concatenated array of features
-        return np.concatenate(img_features)
+        feat = np.concatenate(img_features)
+        return feat
 
 
 
@@ -167,10 +183,14 @@ if __name__ == "__main__":
 
     print("Extracting features... ", end='')
     features = f.extract_features(images)
+
     # Ensure that features are float64
-    X = np.array(features).astype(np.float64)
+    #X = np.array(features).astype(np.float64)
+    X = features
+
     # Fit a per-column scaler
     X_scaler = StandardScaler().fit(X)
+
     # Apply the scaler to X
     scaled_X = X_scaler.transform(X)
     print("OK!")

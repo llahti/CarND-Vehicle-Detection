@@ -8,7 +8,7 @@ class HogSubSampler:
     def __init__(self, classifier, features, scaler, ystart, ystop, scale=1, img_size=(1280, 720)):
         """
         
-        :param classifier: 
+        :param classifier:  
         :param features: 
         :param scaler: 
         :param ystart: 
@@ -185,7 +185,6 @@ if __name__ == "__main__":
     from CarFinder.classifier import Classifier
     import matplotlib.pyplot as plt
     test_img = cv2.imread("./test_images/scene/test1.jpg")
-
 
     f = Features()
     c = Classifier()
