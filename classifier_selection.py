@@ -3,18 +3,14 @@ http://scikit-learn.org/stable/auto_examples/model_selection/grid_search_digits.
 
 """
 
-import time
-from sklearn.svm import LinearSVC, SVC
+
+from sklearn.svm import SVC
 from sklearn.preprocessing import StandardScaler
-from sklearn.model_selection import cross_val_score
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.model_selection import GridSearchCV
-from lesson_functions import *
-from sklearn.model_selection import train_test_split
 from dataset import *
-from utils import *
 import pandas as pd
-import tqdm
+from CarFinder.features import Features
 
 
 save_results = True
@@ -26,16 +22,8 @@ images, y = load_full()
 print("OK!")
 
 print("Extracting Features... ", end='')
-features = extract_features2(images, color_space='LUV',
-                            spatial_size=(15,15),
-                            hist_bins=256,
-                            orient=5,
-                            pix_per_cell=16,
-                            cell_per_block=4,
-                            hog_channel='ALL',
-                            spatial_feat=True,
-                            hist_feat=True,
-                            hog_feat=True)
+f = Features()  # Use defaults
+features = f.extract_features(images)
 print("OK!")
 
 
