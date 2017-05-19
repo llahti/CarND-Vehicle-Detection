@@ -87,15 +87,15 @@ def show_hog_features():
     #plt.plot(hist_ch1[0])
 
     a = fig.add_subplot(2, 4, 2)
-    plt.title("Channel 1")
+    plt.title("HOG - Channel 1")
     plt.imshow(hog_img_ch1, cmap='gray')
 
     a = fig.add_subplot(2, 4, 3)
-    plt.title("Channel 2")
+    plt.title("HOG - Channel 2")
     plt.imshow(hog_img_ch2, cmap='gray')
 
     a = fig.add_subplot(2, 4, 4)
-    plt.title("Channel 3")
+    plt.title("HOG - Channel 3")
     plt.imshow(hog_img_ch3, cmap='gray')
 
     a = fig.add_subplot(2, 4, 5)

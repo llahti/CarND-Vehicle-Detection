@@ -2,6 +2,7 @@ import glob
 import cv2
 import numpy as np
 
+
 def load_small():
     """
     Returns features and labels of small training set.
@@ -73,6 +74,10 @@ def print_statistics():
     print("\tShape of the image is ", x_full[0].shape)
     # Datatype
     print("\tDatatype of image is ", x_full[0].dtype)
+
+
+
+
 
 if __name__ == '__main__':
     print_statistics()
