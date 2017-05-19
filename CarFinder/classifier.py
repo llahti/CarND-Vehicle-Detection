@@ -4,6 +4,7 @@ import cv2
 from sklearn.model_selection import StratifiedShuffleSplit
 from sklearn.svm import SVC
 from sklearn.model_selection import cross_val_score
+from sklearn.utils import shuffle
 import CarFinder.utils as utils
 from sklearn.preprocessing import StandardScaler
 from sklearn.externals import joblib
@@ -64,6 +65,14 @@ class Classifier:
         return self.classifier.predict(features)
 
     def fit(self, X, y, verbose=False):
+        """
+        This method trains classifier and scaler.
+        
+        :param X: Unscaled features
+        :param y: labels
+        :param verbose: 
+        :return: returns cross validation score
+        """
         # Fit a per-column scaler
         self.scaler = StandardScaler().fit(X)
 
@@ -82,6 +91,8 @@ class Classifier:
         # Calculate cross valitated score (this is more reliable way)
         score = cross_val_score(self.classifier, X, y, cv=sss, n_jobs=1).mean()
 
+        # Shuffle data before training
+        # X, y = shuffle(X, y)
         # Train with all available data
         self.classifier.fit(X, y)
 

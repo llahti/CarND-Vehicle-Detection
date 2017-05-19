@@ -53,6 +53,7 @@ class HogSubSampler:
         :param img: image of scene.
         :return: Bounding boxes of found cars
         """
+
         result = self.find_cars(img,
                        ystart=self.ystart,
                        ystop=self.ystop,
@@ -64,6 +65,7 @@ class HogSubSampler:
                        cell_per_block=self.ft.hog_cell_per_block[0],
                        spatial_size=self.ft.spatial_binning_size,
                        hist_bins=self.ft.hist_nbins)
+
         return result
 
 
@@ -86,6 +88,7 @@ class HogSubSampler:
         """
         # Crop
         img_tosearch = img[ystart:ystop, :, :]
+
         #  and convert colorspace
         ctrans_tosearch = self.ft.convert_colorspace(img_tosearch)
 
@@ -214,7 +217,7 @@ if __name__ == "__main__":
 
     f = Features()
     c = Classifier()
-    hogss = HogSubSampler(c.classifier, f, c.scaler, 400, 656, 1)
+    hogss = HogSubSampler(c.classifier, f, c.scaler, 380, 656, 1)
 
     bboxes = hogss.find(test_img)
 
