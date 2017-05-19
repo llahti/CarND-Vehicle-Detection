@@ -5,6 +5,8 @@ from obsolete.lesson_functions import *
 class HogSubSampler:
     def __init__(self, classifier, features, scaler, ystart, ystop, scale=1, img_size=(1280, 720)):
         """
+        This class implements hog subsampling and sliding window search.
+        
         
         :param classifier:  Trained sklearn classifier 
         :param features: Feature object
@@ -29,7 +31,7 @@ class HogSubSampler:
         self.clf = classifier
         self.scaler = scaler
 
-        # Don't use feature class's hog featere vector generation,
+        # Don't use feature class's hog feature vector generation,
         # it is now handled in HogSubSampler
         # self.ft.hog_feat = False
 
@@ -45,6 +47,12 @@ class HogSubSampler:
         self.bboxes = None
 
     def find(self, img):
+        """
+        Abstraction of hog subsampling and sliding window search. 
+        
+        :param img: image of scene.
+        :return: Bounding boxes of found cars
+        """
         result = self.find_cars(img,
                        ystart=self.ystart,
                        ystop=self.ystop,
@@ -63,23 +71,25 @@ class HogSubSampler:
                   pix_per_cell, cell_per_block, spatial_size, hist_bins):
         """
         https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/2b62a1c3-e151-4a0e-b6b6-e424fa46ceab/lessons/fd66c083-4ccb-4fe3-bda1-c29db76f50a0/concepts/c3e815c7-1794-4854-8842-5d7b96276642
-        :param img: 
-        :param ystart: 
-        :param ystop: 
-        :param scale: 
-        :param svc: 
-        :param X_scaler: 
-        :param orient: 
-        :param pix_per_cell: 
-        :param cell_per_block: 
-        :param spatial_size: 
-        :param hist_bins: 
+        :param img: Image of scene
+        :param ystart: Vertical starting point of search
+        :param ystop: Vertical end point of search
+        :param scale: Scaling factor. It scales the standard 64x64 window to different size
+        :param svc: Fitted classifier
+        :param X_scaler: Fitted scaler
+        :param orient: Number of HOG orientation bins
+        :param pix_per_cell: HOG pixels per cell
+        :param cell_per_block: HOG cells per block
+        :param spatial_size: Spatial binning size
+        :param hist_bins: Number of histogram bins
         :return: 
         """
+        # Crop
         img_tosearch = img[ystart:ystop, :, :]
+        #  and convert colorspace
         ctrans_tosearch = self.ft.convert_colorspace(img_tosearch)
-        #ctrans_tosearch = ctrans_tosearch.astype(dtype=np.float64)
 
+        # Scaling is needed only when scale is different than 1
         if scale != 1:
             imshape = ctrans_tosearch.shape
             ctrans_tosearch = cv2.resize(ctrans_tosearch, (
@@ -101,21 +111,21 @@ class HogSubSampler:
         nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
         nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
-        # Compute individual channel HOG features for the entire image
         channels = [ch1, ch2, ch3]
         hoggs = []
+        # Compute individual channel HOG features for the entire image
         for ch in self.ft.hog_channel:
             hog_ch = self.ft.get_hog_features(channels[ch], feature_vec=False)
             hoggs.append(hog_ch)
 
-
         bboxes = []
+        # Loop for sliding window search
         for xb in range(nxsteps):
             for yb in range(nysteps):
                 ypos = yb * cells_per_step
                 xpos = xb * cells_per_step
-                # Extract HOG for this patch
                 hog_features = []
+                # Extract HOG feature vector for this window
                 for ch in hoggs:
                     feat = ch[ypos:ypos + nblocks_per_window,
                                       xpos:xpos + nblocks_per_window].ravel()
@@ -138,11 +148,15 @@ class HogSubSampler:
                                                 hist_features,
                                                 hog_features)).reshape(1,-1)
 
+                # Convert feature vector to float64. That makes it compatible with sklearn StandardScaler
                 test_features = test_features.astype(dtype=np.float64)
 
+                # Scale and predict
                 test_features = X_scaler.transform(test_features)
                 test_prediction = svc.predict(test_features)
 
+                # if found then calculate bounding box of detection.
+                # Bounding box is just a search window coordinates in original image coordination
                 if test_prediction == 1:
                     xbox_left = np.int(xleft * scale)
                     ytop_draw = np.int(ytop * scale)
@@ -154,6 +168,15 @@ class HogSubSampler:
         return bboxes
 
     def draw_bounding_boxes(self, image=None, color=(0, 0, 255), thickness=3):
+        """
+        This method draws bounding boxes of last frame into given image or 
+        if image is not given then creates a black image.
+         
+        :param image: Image to which bounding boxes are drawn. If empty then create black image 
+        :param color: Defines color Usually (BGR), but may very depending the input image type
+        :param thickness: Thickness of drawn rectangles
+        :return: Image with bounding boxes.
+        """
         if image is None:
             shape = (self.image_size[1], self.image_size[0], 3)
             image = np.zeros(shape, dtype=np.uint8)
@@ -166,6 +189,11 @@ class HogSubSampler:
         return image
 
     def heat_map(self):
+        """
+        Generates heatmap from the last frame results.
+        
+        :return: heatmap. 
+        """
         # https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/2b62a1c3-e151-4a0e-b6b6-e424fa46ceab/lessons/fd66c083-4ccb-4fe3-bda1-c29db76f50a0/concepts/de41bff0-ad52-493f-8ef4-5506a279b812
         # Iterate through list of bboxes
         shape = (self.image_size[1], self.image_size[0])
