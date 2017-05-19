@@ -75,7 +75,9 @@ class Classifier:
                                      random_state=888)
 
         # kernel: 'rbf', C: 10, gamma: 0.0002
-        self.classifier = SVC(kernel='rbf', C=10, gamma=0.0002, verbose=verbose)
+        #self.classifier = SVC(kernel='rbf', C=10, gamma=0.0002, verbose=verbose)
+        self.classifier = SVC(kernel='linear', C=50, verbose=verbose)
+
 
         # Calculate cross valitated score (this is more reliable way)
         score = cross_val_score(self.classifier, X, y, cv=sss, n_jobs=1).mean()
