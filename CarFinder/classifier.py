@@ -88,6 +88,12 @@ class Classifier:
         return score
 
     def transform(self, features_vect):
+        """
+        Scale data.
+        
+        :param features_vect: 
+        :return: 
+        """
         scaled_X = self.scaler.transform(features_vect)
         return scaled_X
 
