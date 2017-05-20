@@ -17,33 +17,36 @@ class CarFinder:
         self.hogss_scale_1 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=380, ystop=508,
+                                           ystart=400, ystop=500,
                                            scale=1,
                                            img_size=img_size)
 
         self.hogss_scale_2 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=350, ystop=542,
-                                           scale=1.5,
+                                           ystart=390, ystop=600,
+                                           scale=1.7,
                                            img_size=img_size)
         self.hogss_scale_3 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=350, ystop=606,
+                                           ystart=360, ystop=660,
                                            scale=2,
                                            img_size=img_size)
         self.hogss_scale_4 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=336, ystop=720,
+                                           ystart=320, ystop=700,
                                            scale=3,
                                            img_size=img_size)
 
-        self.hoggs = [self.hogss_scale_1, self.hogss_scale_2, self.hogss_scale_3, self.hogss_scale_4]
+        self.hoggs = [self.hogss_scale_1,
+                      #self.hogss_scale_2,
+                      self.hogss_scale_3] #,
+                      #self.hogss_scale_4]
 
         # Heat map thresholding value
-        self.threshold = 1
+        self.threshold = 5
         # Bounding boxes of cars
         self.bboxes = None
         # Unthresholded heatmap
@@ -59,23 +62,36 @@ class CarFinder:
 
     def __init_heatmap(self, image_size):
         """
+        Initializes heatmap averager.
         
         :param image_size: (x, y) 
         :return: None
         """
-        heatmap  = Averager(15, np.zeros((self.image_size[1], self.image_size[0])), True)
+        heatmap  = Averager(10, np.zeros((self.image_size[1], self.image_size[0]),dtype=np.float32), True)
         return heatmap
 
     def pool_wrapper_hog_find(self, hog_idx, image):
+        """Wrapper for Pool worker to enable multiprocessing. 
+        Currently this is not used."""
         print(self, hog_idx)
         self.hoggs[hog_idx].find(image)
         return True
 
     def find(self, image):
+        """
+        This method finds cars from video stream.
+         
+        :param image: single frame. dtype=np.uint8 and colorspace is BGR.
+        :return: None
+        """
 
         heatmap_temp = np.zeros((self.image_size[1], self.image_size[0]))
+        bound_boxes = np.zeros((self.image_size[1], self.image_size[0], 3))
         for hog in self.hoggs:
-            hog.find(image)
+            bboxes = hog.find(image)
+            #print(len(bboxes))
+            hog.draw_bounding_boxes(bound_boxes)
+            #cv2.imshow('bboxes', bound_boxes)
             heatmap_temp += hog.heat_map()
 
         # # Currently this will crash with video
@@ -96,7 +112,6 @@ class CarFinder:
         #     results.get(timeout=5000)
         #     print('done')
 
-
         #for hog in self.hoggs:
         #    # sum results from all hog subsamplers
         #    heatmap_temp += hog.heat_map()
@@ -105,7 +120,7 @@ class CarFinder:
         # Store per frame results, do "weak" filtering. .i.e. remove single detections
         self.heatmap_raw = heatmap_temp  # [heatmap_temp <= 1] = 0
         # Average heatmap
-        self.heatmap_averaged.put(heatmap_temp.copy())
+        self.heatmap_averaged.put(heatmap_temp.copy().astype(dtype=np.float32))
         # Threshold by setting all pixels below threshold limit to zero.
         self.heatmap_threshold = self.heatmap_raw.copy()
         self.heatmap_threshold[self.heatmap_averaged.mean() <= self.threshold] = 0
@@ -164,7 +179,7 @@ if __name__ == "__main__":
     from moviepy.editor import VideoFileClip
 
 
-    def pip(image, subimage, pos, size, border=5):
+    def pip(image, subimage, pos, size, border=5, title=""):
         """
         Adds sub image into image on given position and given size.
 
@@ -187,11 +202,15 @@ if __name__ == "__main__":
         image[y_top:y_bot, x_left:x_right] = cv2.resize(subimage, size,
                                                         interpolation=cv2.INTER_CUBIC)
 
+        if len(title) != 0:
+            cv2.putText(image, title, (x_left, y_top + 10),
+                        cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255))
+
         return image
 
 
     if False:
-        test_img = cv2.imread("./test_images/scene/test1.jpg")
+        test_img = cv2.imread("./test_images/scene/test5.jpg")
         carfinder = CarFinder()
         carfinder.find(test_img)
         bboxes = carfinder.draw_bounding_boxes(test_img)
@@ -211,16 +230,26 @@ if __name__ == "__main__":
             image = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
             carfinder.find(image)
             bboxes = carfinder.draw_bounding_boxes(image)
+
+            # Draw per frame heatmap
+            frame_heatmap = carfinder.heatmap_raw.copy().astype(dtype=np.uint8)
+            frame_heatmap =cv2.cvtColor(frame_heatmap, cv2.COLOR_GRAY2BGR)*20
+            bboxes = pip(bboxes, frame_heatmap, (10, 5), (213, 120), 5, "Per Frame Heatmap")
+
+            # draw averaged heatmap
             avg_heat = carfinder.heatmap_averaged.mean()
+            avg_heat =  cv2.cvtColor(avg_heat.astype(dtype=np.uint8), cv2.COLOR_GRAY2BGR)*20
+            bboxes = pip(bboxes, avg_heat, (10, 150), (213, 120), 5, "Average Heatmap")
 
-            bboxes = pip(bboxes, cv2.cvtColor(avg_heat.astype(dtype=np.float32)*50, cv2.COLOR_GRAY2BGR), (0, 0), (213, 120), 5)
+            # Draw heatmap threshold
+            heat_thold = carfinder.heatmap_threshold
+            heat_thold = cv2.cvtColor(heat_thold.astype(dtype=np.uint8),
+                                    cv2.COLOR_GRAY2BGR) * 20
+            bboxes = pip(bboxes, heat_thold, (250, 5), (213, 120), 5,
+                         "Heatmap Threshold")
 
-            frame_heatmap = carfinder.heatmap_raw.copy().astype(dtype=np.float32)
-            frame_heatmap =cv2.cvtColor(frame_heatmap, cv2.COLOR_GRAY2BGR)*50
 
-            bboxes = pip(bboxes, frame_heatmap,
-                         (0, 130), (213, 120), 5)
-            #cv2.imshow('heatmap', avg_heat/avg_heat.max())
+
             cv2.imshow('video', bboxes)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break

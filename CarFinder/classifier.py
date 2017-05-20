@@ -79,24 +79,14 @@ class Classifier:
         # Scale X
         X = self.transform(X)
 
-        # Set statified crossvalidation for grid search
-        sss = StratifiedShuffleSplit(n_splits=5, test_size=0.3,
-                                     random_state=888)
-
         # kernel: 'rbf', C: 10, gamma: 0.0002
         #self.classifier = SVC(kernel='rbf', C=10, gamma=0.0002, verbose=verbose)
         self.classifier = SVC(kernel='linear', C=50, verbose=verbose)
 
-
-        # Calculate cross valitated score (this is more reliable way)
-        score = cross_val_score(self.classifier, X, y, cv=sss, n_jobs=1).mean()
-
-        # Shuffle data before training
-        # X, y = shuffle(X, y)
         # Train with all available data
         self.classifier.fit(X, y)
 
-        return score
+        return 0
 
     def transform(self, features_vect):
         """

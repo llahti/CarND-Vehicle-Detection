@@ -1,5 +1,6 @@
 from CarFinder.features import Features
 from obsolete.lesson_functions import *
+from skimage.feature import hog
 
 
 class HogSubSampler:
@@ -25,8 +26,7 @@ class HogSubSampler:
         # Input image size
         self.image_size = img_size
 
-        #
-        self.ft = Features()
+        #self.ft = Features()
         self.ft = features
         self.clf = classifier
         self.scaler = scaler
@@ -91,6 +91,9 @@ class HogSubSampler:
 
         #  and convert colorspace
         ctrans_tosearch = self.ft.convert_colorspace(img_tosearch)
+        # Convert to float32 after colorspace converions in order to get
+        # nice 0...1 range on each channel regardless of colorspace.
+        ctrans_tosearch = ctrans_tosearch.astype(np.float32)/255
 
         # Scaling is needed only when scale is different than 1
         if scale != 1:
@@ -98,27 +101,35 @@ class HogSubSampler:
             ctrans_tosearch = cv2.resize(ctrans_tosearch, (
             np.int(imshape[1] / scale), np.int(imshape[0] / scale)))
 
-        ch1 = ctrans_tosearch[:, :, 0]
-        ch2 = ctrans_tosearch[:, :, 1]
-        ch3 = ctrans_tosearch[:, :, 2]
+        img_size = ctrans_tosearch.shape[0], ctrans_tosearch.shape[1]
+
 
         # Define blocks and steps as above
-        nxblocks = (ch1.shape[1] // pix_per_cell) - cell_per_block + 1
-        nyblocks = (ch1.shape[0] // pix_per_cell) - cell_per_block + 1
-        nfeat_per_block = orient * cell_per_block ** 2
+        nxblocks = (img_size[1] // pix_per_cell) - cell_per_block + 1
+        nyblocks = (img_size[0] // pix_per_cell) - cell_per_block + 1
+        #print("nxblocks {}, nyblocks {}".format(nxblocks, nyblocks))
+        #nfeat_per_block = orient * cell_per_block ** 2
 
         # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
         window = 64
         nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
-        cells_per_step = 2  # Instead of overlap, define how many cells to step
+        cells_per_step = 1  # Instead of overlap, define how many cells to step
         nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
         nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
-        channels = [ch1, ch2, ch3]
         hoggs = []
         # Compute individual channel HOG features for the entire image
         for ch in self.ft.hog_channel:
-            hog_ch = self.ft.get_hog_features(channels[ch], feature_vec=False)
+            #hog_ch = self.ft.get_hog_features(ctrans_tosearch[:, :, ch],
+            #                                  feature_vec=False)
+            hog_ch = hog(ctrans_tosearch[:, :, ch],
+                         orientations=self.ft.hog_orient_nbins,
+                         pixels_per_cell=self.ft.hog_pix_per_cell,
+                         cells_per_block=self.ft.hog_cell_per_block,
+                         transform_sqrt=True,
+                         visualise=False,
+                         feature_vector=False,
+                         block_norm='L2-Hys')
             hoggs.append(hog_ch)
 
         bboxes = []
@@ -161,12 +172,18 @@ class HogSubSampler:
                 # if found then calculate bounding box of detection.
                 # Bounding box is just a search window coordinates in original image coordination
                 if test_prediction == 1:
+                    #cv2.imshow('subimg', subimg[:, :, 0])
+                    #cv2.waitKey(500)
                     xbox_left = np.int(xleft * scale)
                     ytop_draw = np.int(ytop * scale)
                     win_draw = np.int(window * scale)
                     pt1 = (xbox_left, ytop_draw + self.ystart)
                     pt2 = (xbox_left + win_draw, ytop_draw + win_draw + self.ystart)
                     bboxes.append(np.array((pt1, pt2)))
+                else:
+                    #cv2.imshow('subimg', subimg[:, :, 0])
+                    #cv2.waitKey(1)
+                    pass
         self.bboxes = np.array(bboxes)
         return bboxes
 
@@ -213,17 +230,17 @@ class HogSubSampler:
 if __name__ == "__main__":
     from CarFinder.classifier import Classifier
     import matplotlib.pyplot as plt
-    test_img = cv2.imread("./test_images/scene/test1.jpg")
+    test_img = cv2.imread("./test_images/scene/test4.jpg")
 
     f = Features()
     c = Classifier()
-    hogss = HogSubSampler(c.classifier, f, c.scaler, 380, 656, 1)
+    hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=320, ystop=720, scale=1)
 
     bboxes = hogss.find(test_img)
 
     test_img = hogss.draw_bounding_boxes(test_img)
     heatmap = hogss.heat_map()
 
-
+    test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
     plt.imshow(test_img)
     plt.show()

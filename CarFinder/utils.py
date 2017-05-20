@@ -13,13 +13,18 @@ def load_images(vehicles, nonvehicles):
     """
     x, y = [], []
     for img_file in vehicles:
-        x.append(cv2.imread(img_file))
+        img = cv2.imread(img_file)
+        if img is None:
+            raise Exception("Image {} is bad".format(img_file))
+        x.append(img)
         y.append(1)  # Could be also replaced by np.ones() outside of the loop
 
     for img_file in nonvehicles:
-        x.append(cv2.imread(img_file))
-        y.append(
-            0)  # Could be also replaced by np.zeros() outside of the loop
+        img = cv2.imread(img_file)
+        if img is None:
+            raise Exception("Image {} is bad".format(img_file))
+        x.append(img)
+        y.append(0)  # Could be also replaced by np.zeros() outside of the loop
 
     # Convert to numpy arrays and return
     return np.array(x), np.array(y)

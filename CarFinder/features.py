@@ -85,14 +85,14 @@ class Features:
                                   }
 
     def __init__(self, input_cspace='BGR',
-                 target_cspace='LUV',
-                 spatial_binning_size = (16, 16),
+                 target_cspace='YCrCb',
+                 spatial_binning_size=(15, 15),
                  hist_nbins=256,
                  hist_channels=(0, 1, 2),
-                 hog_channel=(0, 1, 2),
-                 hog_orient_nbins=12,
-                 hog_pix_per_cell=(16, 16),
-                 hog_cell_per_block=(4, 4),
+                 hog_channel=( 1, ),
+                 hog_orient_nbins=10,
+                 hog_pix_per_cell=(14, 14),
+                 hog_cell_per_block=(2, 2),
                  spatial_feat=True,
                  hist_feat=True,
                  hog_feat=True):
@@ -138,7 +138,7 @@ class Features:
         :param img: uint8 
         :return: uint8 1D feature vector
         """
-        assert img.dtype == np.uint8, "Only np.uint8 is supported"
+        #assert img.dtype == np.uint8, "Only np.uint8 is supported"
         # Get resized version of image
         spatial_features = cv2.resize(img, self.spatial_binning_size)
         # Make it a 1D-vector and return it
@@ -156,12 +156,12 @@ class Features:
         :param img: Feature image, uint8
         :return: Concatenated histogram of all 3 color channels. dtype=uint8
         """
-        assert img.dtype == np.uint8, "Only np.uint8 is supported"
+        #assert img.dtype == np.uint8, "Only np.uint8 is supported"
         # Compute the histogram of the color channels separately
         features = []
         for i in self.hist_channels:
-            hist = np.histogram(img[:, :, i], bins=self.hist_nbins,
-                                range=(0, 255))
+            hist = np.histogram(img[:, :, i], bins=self.hist_nbins,)
+                                #range=(0, 255))
                                 #range=self.hist_range[i+1])
             # Append only the histogram part
             features.append(hist[0])
@@ -222,7 +222,7 @@ class Features:
         :return: Returns feature vector and/or visualization depending of the 
         vis and feat_vec parameters.
         """
-        assert img.dtype == np.uint8, "Only np.uint8 is supported"
+        #assert img.dtype == np.uint8, "Only np.uint8 is supported"
         # Call with two outputs if vis==True
         if vis:
             features, hog_image = hog(img, orientations=self.hog_orient_nbins,
@@ -262,13 +262,17 @@ class Features:
         :param img: Feature image
         :return: Feature vector
         """
+
+        # Check that image has 3 channels
+        assert img.shape[2] == 3, "Channel count is not 3"
         # 1) Define an empty list to receive features
         img_features = []
 
         #img = img.astype(dtype=np.float32)
-        #feature_image = self.convert_colorspace(img).astype(dtype=np.float64)
-        #feature_image = feature_image.astype(dtype=np.float64)
-        feature_image = img
+        feature_image = self.convert_colorspace(img)
+        feature_image = feature_image.astype(dtype=np.float32)/255
+        feature_image
+        img = feature_image
 
         # 3) Compute spatial features if flag is set
         if self.spatial_feat:
