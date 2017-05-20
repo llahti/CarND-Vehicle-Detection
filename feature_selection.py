@@ -20,7 +20,7 @@ import tqdm
 
 
 save_results = True
-filename = './model_selection/feature_results_final_small.csv'
+filename = './model_selection/feature_results_temp.csv'
 
 
 images, y = load_small()
@@ -49,14 +49,14 @@ combinations = create_parameter_combinations(input_cspace=('BGR',),
 
 
 combinations = create_parameter_combinations(input_cspace=('BGR',),
-                                             target_cspace=('LUV','LAB', 'YCrCb'),
-                                             hog_orient_nbins=[ 12, 13, 14],
-                                             hog_pix_per_cell=[ (14,14), (16, 16), ],
-                                             hog_cell_per_block=[(3,3), (4, 4), (5,5)],
-                                             spatial_binning_size=((15,15), (16,16), (17, 17), ),
-                                             hist_nbins=[128, 256,],
+                                             target_cspace=('YCrCb',),
+                                             hog_orient_nbins=[10, 12,],
+                                             hog_pix_per_cell=[(8,8), (14,14), (16, 16), ],
+                                             hog_cell_per_block=[(2,2), (3,3),  (4,4)],
+                                             spatial_binning_size=((15,15),  ),
+                                             hist_nbins=[256,],
                                              hist_channels= ( (0, 1, 2),),
-                                             hog_channel=( (0,), (1,), (2,), (0,1,2)),
+                                             hog_channel=((1,), (0, 1, 2) ),
                                              hog_feat=[True, ],
                                              hist_feat=[True,],
                                              spatial_feat=[True,])
@@ -99,6 +99,7 @@ for i in tqdm.tqdm(range(len(combinations))):
         #svc = LinearSVC()
         #svc = SVC(kernel='rbf', C=10, gamma=0.0002)
         svc = SVC(kernel='linear', C=50)
+
 
         # Check the training time for the SVC
         start_training = time.time()

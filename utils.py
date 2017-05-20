@@ -29,7 +29,7 @@ def create_parameter_combinations(input_cspace=('RGB', 'HSV', 'LUV', 'HLS', 'YUV
     return df
 
 
-def pip(image, subimage, pos, size, border=5):
+def pip(image, subimage, pos, size, border=5, title=""):
     """
     Adds sub image into image on given position and given size.
     
@@ -51,5 +51,8 @@ def pip(image, subimage, pos, size, border=5):
     x_left - border:x_right + border] = 0  # Cut black hole on left top corner
     image[y_top:y_bot, x_left:x_right] = cv2.resize(subimage, size,
                                                     interpolation=cv2.INTER_CUBIC)
+
+    if len(title)!=0:
+        cv2.putText(image, title, (x_left, y_top-10), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255))
 
     return image

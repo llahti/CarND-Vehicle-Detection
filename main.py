@@ -1,19 +1,18 @@
 import cv2
 import moviepy.editor as mpy
-from moviepy.editor import VideoFileClip
+# from moviepy.editor import VideoFileClip
 from CarFinder.carfinder import CarFinder
 import utils
 import numpy as np
 
 
-input_file = "test_video.mp4"
+input_file = "project_video.mp4"
 output_file = "augmented_project_video.mp4"
 
-
+# Open video clip
 clip = mpy.VideoFileClip(input_file)
 
-# We need to create iterator from udacam which will be used in below
-# function to get frames from camera
+# Get frame iterator which will be used in "frame_generator()"
 clip_iterator = clip.iter_frames()
 
 # Create CarFinder Object
@@ -31,10 +30,24 @@ def frame_generator(t):
     cf.find(frame)
     bboxes = cf.draw_bounding_boxes(frame)
 
-    # Add per frame heatmap to result image
-    colorized_heatmap = cf.heatmap_raw.astype(dtype=np.uint8)*100
-    colorized_heatmap = cv2.cvtColor(colorized_heatmap, cv2.COLOR_GRAY2BGR)
-    utils.pip(bboxes, colorized_heatmap, (0,0), (213, 120), 5)
+    # Draw per frame heatmap
+    frame_heatmap = cf.heatmap_raw.copy().astype(dtype=np.uint8)
+    frame_heatmap = cv2.cvtColor(frame_heatmap, cv2.COLOR_GRAY2BGR) * 20
+    bboxes = utils.pip(bboxes, frame_heatmap, (10, 5), (213, 120), 5,
+                 "Per Frame Heatmap")
+
+    # draw averaged heatmap
+    avg_heat = cf.heatmap_averaged.mean()
+    avg_heat = cv2.cvtColor(avg_heat.astype(dtype=np.uint8),
+                            cv2.COLOR_GRAY2BGR) * 20
+    bboxes = utils.pip(bboxes, avg_heat, (10, 150), (213, 120), 5, "Average Heatmap")
+
+    # Draw heatmap threshold
+    heat_thold = cf.heatmap_threshold
+    heat_thold = cv2.cvtColor(heat_thold.astype(dtype=np.uint8),
+                              cv2.COLOR_GRAY2BGR) * 20
+    bboxes = utils.pip(bboxes, heat_thold, (250, 5), (213, 120), 5,
+                 "Heatmap Threshold")
 
 
     # Need to convert from BGR to RGB to get colors right in video
