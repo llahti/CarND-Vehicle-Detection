@@ -224,8 +224,9 @@ class HogSubSampler:
                 bboxes.append(np.array((pt1, pt2)))
 
         self.bboxes = np.array(bboxes)
+        hmap = self.heat_map()
 
-        return bboxes
+        return hmap
 
     def draw_bounding_boxes(self, image=None, color=(0, 0, 255), thickness=3):
         """
@@ -285,12 +286,12 @@ if __name__ == "__main__":
 
     # Time finding operation
     start = time.monotonic()
-    bboxes = hogss.find(test_img)
+    heatmap = hogss.find(test_img)
     stop = time.monotonic()
     print("hog subsampler run in {} seconds".format(stop-start))
 
     test_img = hogss.draw_bounding_boxes(test_img)
-    heatmap = hogss.heat_map()
+    #heatmap = hogss.heat_map()
 
     test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
     plt.imshow(test_img)
