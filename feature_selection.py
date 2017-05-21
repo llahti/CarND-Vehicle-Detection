@@ -23,7 +23,7 @@ save_results = True
 filename = './model_selection/feature_results_temp.csv'
 
 
-images, y = load_small()
+images, y = load_full()
 
 # Get different parameter combinations
 # Tweak these parameters and see how the results change.
@@ -32,7 +32,7 @@ images, y = load_small()
 #
 
 combinations = create_parameter_combinations(input_cspace=('BGR',),
-                                             target_cspace=['LUV', 'HSV', 'LAB', 'YCrCb'],
+                                             target_cspace=['YCrCb'],
                                              #hog_orient_nbins=[4, 5, 6, 9, 12],
                                              hog_orient_nbins=[6,],
                                              #hog_pix_per_cell=[(8, 8), (10, 10), (12, 12), (15, 15), (17, 17)],
@@ -50,13 +50,13 @@ combinations = create_parameter_combinations(input_cspace=('BGR',),
 
 combinations = create_parameter_combinations(input_cspace=('BGR',),
                                              target_cspace=('YCrCb',),
-                                             hog_orient_nbins=[10, 12,],
-                                             hog_pix_per_cell=[(8,8), (14,14), (16, 16), ],
-                                             hog_cell_per_block=[(2,2), (3,3),  (4,4)],
+                                             hog_orient_nbins=[10, 12, 14, 16],
+                                             hog_pix_per_cell=[(8,8), (12,12), (14,14), (16, 16), ],
+                                             hog_cell_per_block=[(2,2), (3,3),  (4,4), (5,5)],
                                              spatial_binning_size=((15,15),  ),
-                                             hist_nbins=[256,],
+                                             hist_nbins=[32, 128, 256,],
                                              hist_channels= ( (0, 1, 2),),
-                                             hog_channel=((1,), (0, 1, 2) ),
+                                             hog_channel=((0,), (1,), (2,), (0, 1, 2) ),
                                              hog_feat=[True, ],
                                              hist_feat=[True,],
                                              spatial_feat=[True,])
