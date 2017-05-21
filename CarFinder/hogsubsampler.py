@@ -155,8 +155,17 @@ class HogSubSampler:
             for result in results:
                 hoggs[result[0]] = result[1]
 
+        ###############################################
+        # Sliding window search is split into 2 phases.
+        #  1. Generate feature vector for each window
+        #  2. Predict feature vectors as a batch
+        #
+
         bboxes = []
-        # Loop for sliding window search
+        feature_vectors = []
+        parameters = []
+
+        # Generate feature vectors in this loop
         for xb in range(nxsteps):
             for yb in range(nysteps):
                 ypos = yb * cells_per_step
@@ -181,32 +190,39 @@ class HogSubSampler:
                 hist_features = self.ft.color_hist(subimg)
 
                 # Scale features and make a prediction
+                # test_features = np.concatenate((spatial_features,
+                #                                 hist_features,
+                #                                 hog_features)).reshape(1,-1)
+
                 test_features = np.concatenate((spatial_features,
                                                 hist_features,
-                                                hog_features)).reshape(1,-1)
+                                                hog_features)).reshape(-1)
 
-                # Conversion to float64 speed up process little bit
-                test_features = test_features.astype(dtype=np.float64)
 
-                # Scale and predict
-                test_features = X_scaler.transform(test_features)
-                test_prediction = svc.predict(test_features)
+                feature_vectors.append(test_features)
+                parameters.append({'xbox_left': np.int(xleft * scale),
+                                   'ytop_draw': np.int(ytop * scale),
+                                   'win_draw': np.int(window * scale)})
 
-                # if found then calculate bounding box of detection.
-                # Bounding box is just a search window coordinates in original image coordination
-                if test_prediction == 1:
-                    #cv2.imshow('subimg', subimg[:, :, 0])
-                    #cv2.waitKey(500)
-                    xbox_left = np.int(xleft * scale)
-                    ytop_draw = np.int(ytop * scale)
-                    win_draw = np.int(window * scale)
-                    pt1 = (xbox_left, ytop_draw + self.ystart)
-                    pt2 = (xbox_left + win_draw, ytop_draw + win_draw + self.ystart)
-                    bboxes.append(np.array((pt1, pt2)))
-                else:
-                    #cv2.imshow('subimg', subimg[:, :, 0])
-                    #cv2.waitKey(1)
-                    pass
+        # Convert to numpy array for easier data conversion
+        test_features = np.array(feature_vectors)
+        test_features = test_features.astype(dtype=np.float64)
+
+        # Scale and predict all feature vectors
+        test_features = X_scaler.transform(test_features)
+        test_prediction = svc.predict(test_features)
+
+        # Create bounding box for each positive detection
+        for i, pred in enumerate(test_prediction):
+            if pred == 1:
+                p = parameters[i]
+                xbox_left = p['xbox_left']
+                ytop_draw = p['ytop_draw']
+                win_draw =  p['win_draw']
+                pt1 = (xbox_left, ytop_draw + self.ystart)
+                pt2 = (xbox_left + win_draw, ytop_draw + win_draw + self.ystart)
+                bboxes.append(np.array((pt1, pt2)))
+
         self.bboxes = np.array(bboxes)
 
         return bboxes
@@ -261,8 +277,8 @@ if __name__ == "__main__":
     c = Classifier()
 
     ystart=380
-    height=256
-    scale=2
+    height=128
+    scale=1
     ### Change parameters above
     hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=ystart,
                           ystop=ystart+height, scale=scale)
