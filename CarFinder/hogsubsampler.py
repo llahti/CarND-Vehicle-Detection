@@ -1,6 +1,7 @@
 from CarFinder.features import Features
 from obsolete.lesson_functions import *
 from skimage.feature import hog
+from multiprocessing import Pool
 
 
 class HogSubSampler:
@@ -68,6 +69,22 @@ class HogSubSampler:
 
         return result
 
+    @staticmethod
+    def hog_pool_wrapper(cplane_number, cplane, orientations, pixels_per_cell,
+                         cells_per_block, transform_sqrt, visualise,
+                         feature_vector, block_norm):
+        """This function wraps a skimage hog feature extraction into form which 
+        is suitable for python multiprocessing Pool workers"""
+        hog_ch = hog(cplane,
+                     orientations=orientations,
+                     pixels_per_cell=pixels_per_cell,
+                     cells_per_block=cells_per_block,
+                     transform_sqrt=transform_sqrt,
+                     visualise=visualise,
+                     feature_vector=feature_vector,
+                     block_norm=block_norm)
+        return cplane_number, hog_ch
+
 
     def find_cars(self, img, ystart, ystop, scale, svc, X_scaler, orient,
                   pix_per_cell, cell_per_block, spatial_size, hist_bins):
@@ -117,20 +134,26 @@ class HogSubSampler:
         nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
         nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
-        hoggs = []
-        # Compute individual channel HOG features for the entire image
+        ########
+        # Generate parameters for each hog channels
+        hoggs = list(self.ft.hog_channel)  # Create a placeholder for results
+        params = []
         for ch in self.ft.hog_channel:
-            #hog_ch = self.ft.get_hog_features(ctrans_tosearch[:, :, ch],
-            #                                  feature_vec=False)
-            hog_ch = hog(ctrans_tosearch[:, :, ch],
-                         orientations=self.ft.hog_orient_nbins,
-                         pixels_per_cell=self.ft.hog_pix_per_cell,
-                         cells_per_block=self.ft.hog_cell_per_block,
-                         transform_sqrt=True,
-                         visualise=False,
-                         feature_vector=False,
-                         block_norm='L2-Hys')
-            hoggs.append(hog_ch)
+            # Wrapper has otherwise same parameters, but channel number parameter
+            # is added into beginning. Params are as below.
+            p = (ch, ctrans_tosearch[:, :, ch], self.ft.hog_orient_nbins,
+                 self.ft.hog_pix_per_cell, self.ft.hog_cell_per_block,
+                 True, False, False, 'L2-Hys')
+            params.append(p)
+
+        # Create pool of workers to extract hog features
+        with Pool(processes=3) as pool:
+            # Create n pool workers
+            r = pool.starmap_async(HogSubSampler.hog_pool_wrapper, params)
+            results = r.get(timeout=10000)
+            # Put results into hoggs list in a correct order
+            for result in results:
+                hoggs[result[0]] = result[1]
 
         bboxes = []
         # Loop for sliding window search
@@ -162,7 +185,7 @@ class HogSubSampler:
                                                 hist_features,
                                                 hog_features)).reshape(1,-1)
 
-                # Convert feature vector to float64. That makes it compatible with sklearn StandardScaler
+                # Conversion to float64 speed up process little bit
                 test_features = test_features.astype(dtype=np.float64)
 
                 # Scale and predict
@@ -185,6 +208,7 @@ class HogSubSampler:
                     #cv2.waitKey(1)
                     pass
         self.bboxes = np.array(bboxes)
+
         return bboxes
 
     def draw_bounding_boxes(self, image=None, color=(0, 0, 255), thickness=3):
@@ -230,13 +254,24 @@ class HogSubSampler:
 if __name__ == "__main__":
     from CarFinder.classifier import Classifier
     import matplotlib.pyplot as plt
-    test_img = cv2.imread("./test_images/scene/test1.jpg")
+    import time
+    test_img = cv2.imread("./test_images/scene/test3.jpg")
 
     f = Features()
     c = Classifier()
-    hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=370, ystop=560, scale=0.9)
 
+    ystart=380
+    height=256
+    scale=2
+    ### Change parameters above
+    hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=ystart,
+                          ystop=ystart+height, scale=scale)
+
+    # Time finding operation
+    start = time.monotonic()
     bboxes = hogss.find(test_img)
+    stop = time.monotonic()
+    print("hog subsampler run in {} seconds".format(stop-start))
 
     test_img = hogss.draw_bounding_boxes(test_img)
     heatmap = hogss.heat_map()
