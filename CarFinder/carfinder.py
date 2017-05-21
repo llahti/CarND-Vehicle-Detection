@@ -17,33 +17,33 @@ class CarFinder:
         self.hogss_scale_1 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=400, ystop=500,
+                                           ystart=390, ystop=518,
                                            scale=1,
                                            img_size=img_size)
 
         self.hogss_scale_2 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=390, ystop=600,
-                                           scale=1.7,
+                                           ystart=400, ystop=528,
+                                           scale=1,
                                            img_size=img_size)
         self.hogss_scale_3 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=360, ystop=660,
+                                           ystart=370, ystop=626,
                                            scale=2,
                                            img_size=img_size)
         self.hogss_scale_4 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=320, ystop=700,
-                                           scale=3,
+                                           ystart=380, ystop=636,
+                                           scale=2,
                                            img_size=img_size)
 
         self.hoggs = [self.hogss_scale_1,
-                      #self.hogss_scale_2,
-                      self.hogss_scale_3] #,
-                      #self.hogss_scale_4]
+                      self.hogss_scale_2,
+                      self.hogss_scale_3,
+                      self.hogss_scale_4]
 
         # Heat map thresholding value
         self.threshold = 5
