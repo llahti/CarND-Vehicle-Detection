@@ -21,7 +21,7 @@ class HogSubSampler:
 
         # Defines color space conversion, if not defined then conversion
         # is not done
-        self.color_space = cv2.COLOR_BGR2LUV
+        #self.color_space = cv2.COLOR_BGR2LUV
 
         # Input image size
         self.image_size = img_size
@@ -89,11 +89,11 @@ class HogSubSampler:
         # Crop
         img_tosearch = img[ystart:ystop, :, :]
 
-        #  and convert colorspace
-        ctrans_tosearch = self.ft.convert_colorspace(img_tosearch)
+        #  and convert datatype and colorspace
+        ctrans_tosearch = self.ft.convert_colorspace(img_tosearch, True)
         # Convert to float32 after colorspace converions in order to get
         # nice 0...1 range on each channel regardless of colorspace.
-        ctrans_tosearch = ctrans_tosearch.astype(np.float32)/255
+        #ctrans_tosearch = ctrans_tosearch.astype(np.float32)/255
 
         # Scaling is needed only when scale is different than 1
         if scale != 1:
@@ -113,7 +113,7 @@ class HogSubSampler:
         # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
         window = 64
         nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
-        cells_per_step = 1  # Instead of overlap, define how many cells to step
+        cells_per_step = 2  # Instead of overlap, define how many cells to step
         nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
         nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
@@ -230,11 +230,11 @@ class HogSubSampler:
 if __name__ == "__main__":
     from CarFinder.classifier import Classifier
     import matplotlib.pyplot as plt
-    test_img = cv2.imread("./test_images/scene/test4.jpg")
+    test_img = cv2.imread("./test_images/scene/test1.jpg")
 
     f = Features()
     c = Classifier()
-    hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=320, ystop=720, scale=1)
+    hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=370, ystop=560, scale=0.9)
 
     bboxes = hogss.find(test_img)
 

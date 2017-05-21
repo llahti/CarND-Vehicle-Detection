@@ -105,8 +105,37 @@ def show_hog_features():
 
     plt.show()
 
+def show_cars_noncars(filename=None):
+    images, y = dataset.load_small()
+    vehicles = images[y == 1]
+    non_vehicles = images[y == 0]
+
+    fig = plt.figure(figsize=(6, 7))
+    fig.suptitle("Vehicles and Non-vehicles", fontsize=20)
+
+    a = fig.add_subplot(2, 2, 1)
+    plt.title("Vehicle")
+    plt.imshow(vehicles[0])
+
+
+    a = fig.add_subplot(2, 2, 2)
+    plt.title("Vechile")
+    plt.imshow(vehicles[100])
+
+    a = fig.add_subplot(2, 2, 3)
+    plt.title("Non-vehicle")
+    plt.imshow(non_vehicles[0])
+
+    a = fig.add_subplot(2, 2, 4)
+    plt.title("Non-vehicle")
+    plt.imshow(non_vehicles[100])
+
+    if filename:
+        plt.savefig(filename)
+    plt.show()
 
 if __name__ == "__main__":
     #show_spatial_binning()
     #show_color_histogram()
-    show_hog_features()
+    #show_hog_features()
+    show_cars_noncars("./output_images/vehicles_non_vehicles.png")
