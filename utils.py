@@ -52,7 +52,8 @@ def pip(image, subimage, pos, size, border=5, title=""):
     image[y_top:y_bot, x_left:x_right] = cv2.resize(subimage, size,
                                                     interpolation=cv2.INTER_CUBIC)
 
-    if len(title)!=0:
-        cv2.putText(image, title, (x_left, y_top-10), cv2.FONT_HERSHEY_COMPLEX, 1, (255, 255, 255))
+    if len(title) != 0:
+        cv2.putText(image, title, (x_left, y_top + 10),
+                    cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255))
 
     return image
