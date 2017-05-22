@@ -86,15 +86,9 @@ class CarFinder:
         """
 
         heatmap_temp = np.zeros((self.image_size[1], self.image_size[0]), dtype=np.float64)
-        #bound_boxes = np.zeros((self.image_size[1], self.image_size[0], 3))
+
         for hog in self.hoggs:
-            #bboxes = hog.find(image)
-            #print(len(bboxes))
-            #hog.draw_bounding_boxes(bound_boxes)
-            #cv2.imshow('bboxes', bound_boxes)
-            #heatmap_temp += hog.heat_map()
             heatmap_temp += hog.find(image)
-            #self.heatmap_raw = hog.find(image)
 
         # # Currently this will crash with video
         # # Works with single image
