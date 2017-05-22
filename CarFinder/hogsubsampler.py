@@ -43,31 +43,8 @@ class HogSubSampler:
         # Image scaling factor
         self.scale = scale
 
-
         # Record last results here
         self.bboxes = None
-
-    def find(self, img):
-        """
-        Abstraction of hog subsampling and sliding window search. 
-        
-        :param img: image of scene.
-        :return: Bounding boxes of found cars
-        """
-
-        result = self.find_cars(img,
-                       ystart=self.ystart,
-                       ystop=self.ystop,
-                       scale=self.scale,
-                       svc=self.clf,
-                       X_scaler=self.scaler,
-                       orient=self.ft.hog_orient_nbins,
-                       pix_per_cell=self.ft.hog_pix_per_cell[0],
-                       cell_per_block=self.ft.hog_cell_per_block[0],
-                       spatial_size=self.ft.spatial_binning_size,
-                       hist_bins=self.ft.hist_nbins)
-
-        return result
 
     @staticmethod
     def hog_pool_wrapper(cplane_number, cplane, orientations, pixels_per_cell,
@@ -85,47 +62,32 @@ class HogSubSampler:
                      block_norm=block_norm)
         return cplane_number, hog_ch
 
-
-    def find_cars(self, img, ystart, ystop, scale, svc, X_scaler, orient,
-                  pix_per_cell, cell_per_block, spatial_size, hist_bins):
+    def find(self, img):
         """
         https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/2b62a1c3-e151-4a0e-b6b6-e424fa46ceab/lessons/fd66c083-4ccb-4fe3-bda1-c29db76f50a0/concepts/c3e815c7-1794-4854-8842-5d7b96276642
+        
         :param img: Image of scene
-        :param ystart: Vertical starting point of search
-        :param ystop: Vertical end point of search
-        :param scale: Scaling factor. It scales the standard 64x64 window to different size
-        :param svc: Fitted classifier
-        :param X_scaler: Fitted scaler
-        :param orient: Number of HOG orientation bins
-        :param pix_per_cell: HOG pixels per cell
-        :param cell_per_block: HOG cells per block
-        :param spatial_size: Spatial binning size
-        :param hist_bins: Number of histogram bins
         :return: 
         """
         # Crop
-        img_tosearch = img[ystart:ystop, :, :]
+        img_tosearch = img[self.ystart:self.ystop, :, :]
 
-        #  and convert datatype and colorspace
+        # Convert datatype and colorspace
         ctrans_tosearch = self.ft.convert_colorspace(img_tosearch, True)
-        # Convert to float32 after colorspace converions in order to get
-        # nice 0...1 range on each channel regardless of colorspace.
-        #ctrans_tosearch = ctrans_tosearch.astype(np.float32)/255
 
         # Scaling is needed only when scale is different than 1
-        if scale != 1:
+        if self.scale != 1:
             imshape = ctrans_tosearch.shape
             ctrans_tosearch = cv2.resize(ctrans_tosearch, (
-            np.int(imshape[1] / scale), np.int(imshape[0] / scale)))
+                np.int(imshape[1] / self.scale), np.int(imshape[0] / self.scale)))
 
         img_size = ctrans_tosearch.shape[0], ctrans_tosearch.shape[1]
 
-
+        pix_per_cell= self.ft.hog_pix_per_cell[0]  # Use x for all
+        cell_per_block = self.ft.hog_cell_per_block[0]  # Use x for all
         # Define blocks and steps as above
         nxblocks = (img_size[1] // pix_per_cell) - cell_per_block + 1
         nyblocks = (img_size[0] // pix_per_cell) - cell_per_block + 1
-        #print("nxblocks {}, nyblocks {}".format(nxblocks, nyblocks))
-        #nfeat_per_block = orient * cell_per_block ** 2
 
         # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
         window = 64
@@ -189,28 +151,24 @@ class HogSubSampler:
                 spatial_features = self.ft.bin_spatial(subimg)
                 hist_features = self.ft.color_hist(subimg)
 
-                # Scale features and make a prediction
-                # test_features = np.concatenate((spatial_features,
-                #                                 hist_features,
-                #                                 hog_features)).reshape(1,-1)
-
+                # Concatenate features into a 1D-feature vector
                 test_features = np.concatenate((spatial_features,
                                                 hist_features,
                                                 hog_features)).reshape(-1)
 
-
+                # Save feature vector bounding box parameters for later batch processing
                 feature_vectors.append(test_features)
-                parameters.append({'xbox_left': np.int(xleft * scale),
-                                   'ytop_draw': np.int(ytop * scale),
-                                   'win_draw': np.int(window * scale)})
+                parameters.append({'xbox_left': np.int(xleft * self.scale),
+                                   'ytop_draw': np.int(ytop * self.scale),
+                                   'win_draw': np.int(window * self.scale)})
 
         # Convert to numpy array for easier data conversion
         test_features = np.array(feature_vectors)
         test_features = test_features.astype(dtype=np.float64)
 
         # Scale and predict all feature vectors
-        test_features = X_scaler.transform(test_features)
-        test_prediction = svc.predict(test_features)
+        test_features = self.scaler.transform(test_features)
+        test_prediction = self.clf.predict(test_features)
 
         # Create bounding box for each positive detection
         for i, pred in enumerate(test_prediction):
@@ -225,7 +183,6 @@ class HogSubSampler:
 
         self.bboxes = np.array(bboxes)
         hmap = self.heat_map()
-
         return hmap
 
     def draw_bounding_boxes(self, image=None, color=(0, 0, 255), thickness=3):
@@ -243,10 +200,8 @@ class HogSubSampler:
             image = np.zeros(shape, dtype=np.uint8)
 
         for p in self.bboxes:
-            pt1 = tuple(p[0])
-            pt2 = tuple(p[1])
-            #print(pt1, pt2)
-            cv2.rectangle(image, pt1, pt2, color=color, thickness=thickness)
+            cv2.rectangle(image, tuple(p[0]), tuple(p[1]),
+                          color=color, thickness=thickness)
         return image
 
     def heat_map(self):
