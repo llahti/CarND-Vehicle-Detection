@@ -158,10 +158,13 @@ class HogSubSampler:
                                    'ytop_draw': np.int(ytop * self.scale),
                                    'win_draw': np.int(window * self.scale)})
 
+
+        #with Pool(processes=4) as pool:
+        # TODO: Convert below prediction code and bounding box code into a function
+        #       Which can be called by pool workers.
         # Convert to numpy array for easier data conversion
         test_features = np.array(feature_vectors)
         test_features = test_features.astype(dtype=np.float64)
-
         # Scale and predict all feature vectors
         test_features = self.scaler.transform(test_features)
         test_prediction = self.clf.predict(test_features)
