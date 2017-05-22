@@ -20,10 +20,6 @@ class HogSubSampler:
         :param img_size: (x, y) 
         """
 
-        # Defines color space conversion, if not defined then conversion
-        # is not done
-        #self.color_space = cv2.COLOR_BGR2LUV
-
         # Input image size
         self.image_size = img_size
 
