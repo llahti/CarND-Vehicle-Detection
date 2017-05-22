@@ -17,36 +17,36 @@ class CarFinder:
         self.hogss_scale_1 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=400, ystop=500,
+                                           ystart=390, ystop=518,
                                            scale=1,
                                            img_size=img_size)
 
         self.hogss_scale_2 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=390, ystop=600,
-                                           scale=1.7,
+                                           ystart=400, ystop=528,
+                                           scale=1,
                                            img_size=img_size)
         self.hogss_scale_3 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=360, ystop=660,
+                                           ystart=370, ystop=626,
                                            scale=2,
                                            img_size=img_size)
         self.hogss_scale_4 = HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=320, ystop=700,
-                                           scale=3,
+                                           ystart=380, ystop=636,
+                                           scale=2,
                                            img_size=img_size)
 
         self.hoggs = [self.hogss_scale_1,
-                      #self.hogss_scale_2,
-                      self.hogss_scale_3] #,
-                      #self.hogss_scale_4]
+                      self.hogss_scale_2,
+                      self.hogss_scale_3,
+                      self.hogss_scale_4]
 
         # Heat map thresholding value
-        self.threshold = 5
+        self.threshold = 4
         # Bounding boxes of cars
         self.bboxes = None
         # Unthresholded heatmap
@@ -67,7 +67,7 @@ class CarFinder:
         :param image_size: (x, y) 
         :return: None
         """
-        heatmap  = Averager(10, np.zeros((self.image_size[1], self.image_size[0]),dtype=np.float32), True)
+        heatmap  = Averager(10, np.zeros((self.image_size[1], self.image_size[0]),dtype=np.float64), True)
         return heatmap
 
     def pool_wrapper_hog_find(self, hog_idx, image):
@@ -85,14 +85,10 @@ class CarFinder:
         :return: None
         """
 
-        heatmap_temp = np.zeros((self.image_size[1], self.image_size[0]))
-        bound_boxes = np.zeros((self.image_size[1], self.image_size[0], 3))
+        heatmap_temp = np.zeros((self.image_size[1], self.image_size[0]), dtype=np.float64)
+
         for hog in self.hoggs:
-            bboxes = hog.find(image)
-            #print(len(bboxes))
-            hog.draw_bounding_boxes(bound_boxes)
-            #cv2.imshow('bboxes', bound_boxes)
-            heatmap_temp += hog.heat_map()
+            heatmap_temp += hog.find(image)
 
         # # Currently this will crash with video
         # # Works with single image
@@ -118,9 +114,11 @@ class CarFinder:
 
 
         # Store per frame results, do "weak" filtering. .i.e. remove single detections
-        self.heatmap_raw = heatmap_temp  # [heatmap_temp <= 1] = 0
+        self.heatmap_raw  = heatmap_temp
         # Average heatmap
-        self.heatmap_averaged.put(heatmap_temp.copy().astype(dtype=np.float32))
+        #self.heatmap_averaged.put(heatmap_temp.copy().astype(dtype=np.float32))
+        # Put blurred version of raw heatmap to mean filter.
+        self.heatmap_averaged.put(cv2.GaussianBlur(self.heatmap_raw.copy(), (25, 25), 0))
         # Threshold by setting all pixels below threshold limit to zero.
         self.heatmap_threshold = self.heatmap_raw.copy()
         self.heatmap_threshold[self.heatmap_averaged.mean() <= self.threshold] = 0
@@ -233,21 +231,29 @@ if __name__ == "__main__":
 
             # Draw per frame heatmap
             frame_heatmap = carfinder.heatmap_raw.copy().astype(dtype=np.uint8)
-            frame_heatmap =cv2.cvtColor(frame_heatmap, cv2.COLOR_GRAY2BGR)*20
-            bboxes = pip(bboxes, frame_heatmap, (10, 5), (213, 120), 5, "Per Frame Heatmap")
+            frame_heatmap = cv2.cvtColor(frame_heatmap, cv2.COLOR_GRAY2BGR)*15
+            bboxes = pip(bboxes, frame_heatmap, (10, 5), (213, 120), 5,
+                         "Per Frame Heatmap")
 
             # draw averaged heatmap
             avg_heat = carfinder.heatmap_averaged.mean()
-            avg_heat =  cv2.cvtColor(avg_heat.astype(dtype=np.uint8), cv2.COLOR_GRAY2BGR)*20
-            bboxes = pip(bboxes, avg_heat, (10, 150), (213, 120), 5, "Average Heatmap")
+            avg_heat =  cv2.cvtColor(avg_heat.astype(dtype=np.uint8), cv2.COLOR_GRAY2BGR)*15
+            bboxes = pip(bboxes, avg_heat, (10, 150), (213, 120), 5,
+                         "Average Heatmap")
 
             # Draw heatmap threshold
             heat_thold = carfinder.heatmap_threshold
             heat_thold = cv2.cvtColor(heat_thold.astype(dtype=np.uint8),
-                                    cv2.COLOR_GRAY2BGR) * 20
+                                    cv2.COLOR_GRAY2BGR) * 15
             bboxes = pip(bboxes, heat_thold, (250, 5), (213, 120), 5,
                          "Heatmap Threshold")
 
+            # Draw labels
+            labels = carfinder.labels[0]*20  # Idiotic way to make labels visible
+            labels = cv2.cvtColor(labels.astype(dtype=np.uint8),
+                                    cv2.COLOR_GRAY2BGR) * 15
+            bboxes = pip(bboxes, labels, (250, 150), (213, 120), 5,
+                         "Labels")
 
 
             cv2.imshow('video', bboxes)

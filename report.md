@@ -18,6 +18,9 @@ There are two videos given first one `test_video.mp4` which can be used to test 
 
 Training images are split into **vehicle** and **non-vehicle** classes.
 
+
+
+
 <figure>
  <img src="./illustrations/vehicle_01.png" width="64" alt="Vehicle 01" />
  <figcaption>

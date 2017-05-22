@@ -78,7 +78,6 @@ def print_statistics():
 
 
 
-
 if __name__ == '__main__':
     print_statistics()
     x, y = load_small()

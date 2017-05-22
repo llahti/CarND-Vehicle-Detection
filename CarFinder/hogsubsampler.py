@@ -1,6 +1,7 @@
 from CarFinder.features import Features
 from obsolete.lesson_functions import *
 from skimage.feature import hog
+from multiprocessing import Pool
 
 
 class HogSubSampler:
@@ -18,10 +19,6 @@ class HogSubSampler:
                       scale is 2 then search window size is 128.
         :param img_size: (x, y) 
         """
-
-        # Defines color space conversion, if not defined then conversion
-        # is not done
-        self.color_space = cv2.COLOR_BGR2LUV
 
         # Input image size
         self.image_size = img_size
@@ -42,98 +39,91 @@ class HogSubSampler:
         # Image scaling factor
         self.scale = scale
 
-
         # Record last results here
         self.bboxes = None
 
+    @staticmethod
+    def hog_pool_wrapper(cplane_number, cplane, orientations, pixels_per_cell,
+                         cells_per_block, transform_sqrt, visualise,
+                         feature_vector, block_norm):
+        """This function wraps a skimage hog feature extraction into form which 
+        is suitable for python multiprocessing Pool workers"""
+        hog_ch = hog(cplane,
+                     orientations=orientations,
+                     pixels_per_cell=pixels_per_cell,
+                     cells_per_block=cells_per_block,
+                     transform_sqrt=transform_sqrt,
+                     visualise=visualise,
+                     feature_vector=feature_vector,
+                     block_norm=block_norm)
+        return cplane_number, hog_ch
+
     def find(self, img):
         """
-        Abstraction of hog subsampling and sliding window search. 
-        
-        :param img: image of scene.
-        :return: Bounding boxes of found cars
-        """
-
-        result = self.find_cars(img,
-                       ystart=self.ystart,
-                       ystop=self.ystop,
-                       scale=self.scale,
-                       svc=self.clf,
-                       X_scaler=self.scaler,
-                       orient=self.ft.hog_orient_nbins,
-                       pix_per_cell=self.ft.hog_pix_per_cell[0],
-                       cell_per_block=self.ft.hog_cell_per_block[0],
-                       spatial_size=self.ft.spatial_binning_size,
-                       hist_bins=self.ft.hist_nbins)
-
-        return result
-
-
-    def find_cars(self, img, ystart, ystop, scale, svc, X_scaler, orient,
-                  pix_per_cell, cell_per_block, spatial_size, hist_bins):
-        """
         https://classroom.udacity.com/nanodegrees/nd013/parts/fbf77062-5703-404e-b60c-95b78b2f3f9e/modules/2b62a1c3-e151-4a0e-b6b6-e424fa46ceab/lessons/fd66c083-4ccb-4fe3-bda1-c29db76f50a0/concepts/c3e815c7-1794-4854-8842-5d7b96276642
+        
         :param img: Image of scene
-        :param ystart: Vertical starting point of search
-        :param ystop: Vertical end point of search
-        :param scale: Scaling factor. It scales the standard 64x64 window to different size
-        :param svc: Fitted classifier
-        :param X_scaler: Fitted scaler
-        :param orient: Number of HOG orientation bins
-        :param pix_per_cell: HOG pixels per cell
-        :param cell_per_block: HOG cells per block
-        :param spatial_size: Spatial binning size
-        :param hist_bins: Number of histogram bins
         :return: 
         """
         # Crop
-        img_tosearch = img[ystart:ystop, :, :]
+        img_tosearch = img[self.ystart:self.ystop, :, :]
 
-        #  and convert colorspace
-        ctrans_tosearch = self.ft.convert_colorspace(img_tosearch)
-        # Convert to float32 after colorspace converions in order to get
-        # nice 0...1 range on each channel regardless of colorspace.
-        ctrans_tosearch = ctrans_tosearch.astype(np.float32)/255
+        # Convert datatype and colorspace
+        ctrans_tosearch = self.ft.convert_colorspace(img_tosearch, True)
 
         # Scaling is needed only when scale is different than 1
-        if scale != 1:
+        if self.scale != 1:
             imshape = ctrans_tosearch.shape
             ctrans_tosearch = cv2.resize(ctrans_tosearch, (
-            np.int(imshape[1] / scale), np.int(imshape[0] / scale)))
+                np.int(imshape[1] / self.scale), np.int(imshape[0] / self.scale)))
 
         img_size = ctrans_tosearch.shape[0], ctrans_tosearch.shape[1]
 
-
+        pix_per_cell= self.ft.hog_pix_per_cell[0]  # Use x for all
+        cell_per_block = self.ft.hog_cell_per_block[0]  # Use x for all
         # Define blocks and steps as above
         nxblocks = (img_size[1] // pix_per_cell) - cell_per_block + 1
         nyblocks = (img_size[0] // pix_per_cell) - cell_per_block + 1
-        #print("nxblocks {}, nyblocks {}".format(nxblocks, nyblocks))
-        #nfeat_per_block = orient * cell_per_block ** 2
 
         # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
         window = 64
         nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
-        cells_per_step = 1  # Instead of overlap, define how many cells to step
+        cells_per_step = 2  # Instead of overlap, define how many cells to step
         nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
         nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
-        hoggs = []
-        # Compute individual channel HOG features for the entire image
+        ########
+        # Generate parameters for each hog channels
+        hoggs = list(self.ft.hog_channel)  # Create a placeholder for results
+        params = []
         for ch in self.ft.hog_channel:
-            #hog_ch = self.ft.get_hog_features(ctrans_tosearch[:, :, ch],
-            #                                  feature_vec=False)
-            hog_ch = hog(ctrans_tosearch[:, :, ch],
-                         orientations=self.ft.hog_orient_nbins,
-                         pixels_per_cell=self.ft.hog_pix_per_cell,
-                         cells_per_block=self.ft.hog_cell_per_block,
-                         transform_sqrt=True,
-                         visualise=False,
-                         feature_vector=False,
-                         block_norm='L2-Hys')
-            hoggs.append(hog_ch)
+            # Wrapper has otherwise same parameters, but channel number parameter
+            # is added into beginning. Params are as below.
+            p = (ch, ctrans_tosearch[:, :, ch], self.ft.hog_orient_nbins,
+                 self.ft.hog_pix_per_cell, self.ft.hog_cell_per_block,
+                 True, False, False, 'L2-Hys')
+            params.append(p)
+
+        # Create pool of workers to extract hog features
+        with Pool(processes=3) as pool:
+            # Create n pool workers
+            r = pool.starmap_async(HogSubSampler.hog_pool_wrapper, params)
+            results = r.get(timeout=10000)
+            # Put results into hoggs list in a correct order
+            for result in results:
+                hoggs[result[0]] = result[1]
+
+        ###############################################
+        # Sliding window search is split into 2 phases.
+        #  1. Generate feature vector for each window
+        #  2. Predict feature vectors as a batch
+        #
 
         bboxes = []
-        # Loop for sliding window search
+        feature_vectors = []
+        parameters = []
+
+        # Generate feature vectors in this loop
         for xb in range(nxsteps):
             for yb in range(nysteps):
                 ypos = yb * cells_per_step
@@ -157,35 +147,42 @@ class HogSubSampler:
                 spatial_features = self.ft.bin_spatial(subimg)
                 hist_features = self.ft.color_hist(subimg)
 
-                # Scale features and make a prediction
+                # Concatenate features into a 1D-feature vector
                 test_features = np.concatenate((spatial_features,
                                                 hist_features,
-                                                hog_features)).reshape(1,-1)
+                                                hog_features)).reshape(-1)
 
-                # Convert feature vector to float64. That makes it compatible with sklearn StandardScaler
-                test_features = test_features.astype(dtype=np.float64)
+                # Save feature vector bounding box parameters for later batch processing
+                feature_vectors.append(test_features)
+                parameters.append({'xbox_left': np.int(xleft * self.scale),
+                                   'ytop_draw': np.int(ytop * self.scale),
+                                   'win_draw': np.int(window * self.scale)})
 
-                # Scale and predict
-                test_features = X_scaler.transform(test_features)
-                test_prediction = svc.predict(test_features)
 
-                # if found then calculate bounding box of detection.
-                # Bounding box is just a search window coordinates in original image coordination
-                if test_prediction == 1:
-                    #cv2.imshow('subimg', subimg[:, :, 0])
-                    #cv2.waitKey(500)
-                    xbox_left = np.int(xleft * scale)
-                    ytop_draw = np.int(ytop * scale)
-                    win_draw = np.int(window * scale)
-                    pt1 = (xbox_left, ytop_draw + self.ystart)
-                    pt2 = (xbox_left + win_draw, ytop_draw + win_draw + self.ystart)
-                    bboxes.append(np.array((pt1, pt2)))
-                else:
-                    #cv2.imshow('subimg', subimg[:, :, 0])
-                    #cv2.waitKey(1)
-                    pass
+        #with Pool(processes=4) as pool:
+        # TODO: Convert below prediction code and bounding box code into a function
+        #       Which can be called by pool workers.
+        # Convert to numpy array for easier data conversion
+        test_features = np.array(feature_vectors)
+        test_features = test_features.astype(dtype=np.float64)
+        # Scale and predict all feature vectors
+        test_features = self.scaler.transform(test_features)
+        test_prediction = self.clf.predict(test_features)
+
+        # Create bounding box for each positive detection
+        for i, pred in enumerate(test_prediction):
+            if pred == 1:
+                p = parameters[i]
+                xbox_left = p['xbox_left']
+                ytop_draw = p['ytop_draw']
+                win_draw =  p['win_draw']
+                pt1 = (xbox_left, ytop_draw + self.ystart)
+                pt2 = (xbox_left + win_draw, ytop_draw + win_draw + self.ystart)
+                bboxes.append(np.array((pt1, pt2)))
+
         self.bboxes = np.array(bboxes)
-        return bboxes
+        hmap = self.heat_map()
+        return hmap
 
     def draw_bounding_boxes(self, image=None, color=(0, 0, 255), thickness=3):
         """
@@ -202,10 +199,8 @@ class HogSubSampler:
             image = np.zeros(shape, dtype=np.uint8)
 
         for p in self.bboxes:
-            pt1 = tuple(p[0])
-            pt2 = tuple(p[1])
-            #print(pt1, pt2)
-            cv2.rectangle(image, pt1, pt2, color=color, thickness=thickness)
+            cv2.rectangle(image, tuple(p[0]), tuple(p[1]),
+                          color=color, thickness=thickness)
         return image
 
     def heat_map(self):
@@ -230,16 +225,27 @@ class HogSubSampler:
 if __name__ == "__main__":
     from CarFinder.classifier import Classifier
     import matplotlib.pyplot as plt
-    test_img = cv2.imread("./test_images/scene/test4.jpg")
+    import time
+    test_img = cv2.imread("./test_images/scene/test3.jpg")
 
     f = Features()
     c = Classifier()
-    hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=320, ystop=720, scale=1)
 
-    bboxes = hogss.find(test_img)
+    ystart=380
+    height=128
+    scale=1
+    ### Change parameters above
+    hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=ystart,
+                          ystop=ystart+height, scale=scale)
+
+    # Time finding operation
+    start = time.monotonic()
+    heatmap = hogss.find(test_img)
+    stop = time.monotonic()
+    print("hog subsampler run in {} seconds".format(stop-start))
 
     test_img = hogss.draw_bounding_boxes(test_img)
-    heatmap = hogss.heat_map()
+    #heatmap = hogss.heat_map()
 
     test_img = cv2.cvtColor(test_img, cv2.COLOR_BGR2RGB)
     plt.imshow(test_img)
