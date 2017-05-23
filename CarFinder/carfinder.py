@@ -203,7 +203,7 @@ class CarFinder:
         :return: combined image
         """
         # Idiotic way to make labels visible
-        labels = carfinder.labels[0].copy().astype(dtype=np.uint8) * 20
+        labels = self.labels[0].copy().astype(dtype=np.uint8) * 20
         labels = cv2.cvtColor(labels, cv2.COLOR_GRAY2BGR) * 10
         # labels = cv2.applyColorMap(heat_thold, cv2.COLORMAP_HSV)
         src = pip(src, labels, position, size, 5,
