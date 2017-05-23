@@ -14,36 +14,33 @@ class CarFinder:
         self.clf = Classifier()
         self.image_size = img_size
 
-        self.hogss_scale_1 = HogSubSampler(classifier=self.clf.classifier,
+        self.hoggs = [HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=390, ystop=518,
+                                           ystart=390, ystop=582,
                                            scale=1,
-                                           img_size=img_size)
+                                           img_size=img_size),
 
-        self.hogss_scale_2 = HogSubSampler(classifier=self.clf.classifier,
+                      HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
-                                           ystart=400, ystop=528,
+                                           ystart=400, ystop=592,
                                            scale=1,
-                                           img_size=img_size)
-        self.hogss_scale_3 = HogSubSampler(classifier=self.clf.classifier,
+                                           img_size=img_size),
+                      HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
                                            ystart=370, ystop=626,
                                            scale=2,
-                                           img_size=img_size)
-        self.hogss_scale_4 = HogSubSampler(classifier=self.clf.classifier,
+                                           img_size=img_size),
+                      HogSubSampler(classifier=self.clf.classifier,
                                            features=self.ft,
                                            scaler=self.clf.scaler,
                                            ystart=380, ystop=636,
                                            scale=2,
-                                           img_size=img_size)
+                                           img_size=img_size)]
 
-        self.hoggs = [self.hogss_scale_1,
-                      self.hogss_scale_2,
-                      self.hogss_scale_3,
-                      self.hogss_scale_4]
+
 
         # Heat map thresholding value
         self.threshold = 4
@@ -89,29 +86,6 @@ class CarFinder:
 
         for hog in self.hoggs:
             heatmap_temp += hog.find(image)
-
-        # # Currently this will crash with video
-        # # Works with single image
-        # args = [[self, idx, image] for idx in range(len(self.hoggs))]
-        # f = CarFinder.pool_wrapper_hog_find
-        # with Pool(processes=4) as pool:
-        #     #pool.map(f, args)
-        #     results = pool.starmap(f, args)
-        #     print('Waiting for tasks to complete')
-        #     #pool.close()
-        #     #pool.join()
-        #     print('Joined')
-        #     #results.wait(timeout=5000)
-        #     print("collecting results")
-        #     #self.hoggs = results.get(timeout=5000)
-        #     print("all received")
-        #     results.get(timeout=5000)
-        #     print('done')
-
-        #for hog in self.hoggs:
-        #    # sum results from all hog subsamplers
-        #    heatmap_temp += hog.heat_map()
-
 
         # Store per frame results, do "weak" filtering. .i.e. remove single detections
         self.heatmap_raw  = heatmap_temp
