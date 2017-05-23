@@ -5,45 +5,47 @@ from CarFinder.hogsubsampler import HogSubSampler
 from CarFinder.averager import Averager
 from scipy.ndimage.measurements import label
 import numpy as np
+from CarFinder.utils import pip
 from multiprocessing import Pool
 import matplotlib.pyplot as plt
 
 class CarFinder:
     def __init__(self, img_size=(1280, 720)):
-        self. ft = Features()
+        self.ft = Features()
         self.clf = Classifier()
+        self.clf2 = Classifier()
+        self.clf3 = Classifier()
+        self.clf4 = Classifier()
         self.image_size = img_size
 
         self.hoggs = [HogSubSampler(classifier=self.clf.classifier,
-                                           features=self.ft,
-                                           scaler=self.clf.scaler,
-                                           ystart=390, ystop=582,
-                                           scale=1,
-                                           img_size=img_size),
+                                    features=self.ft,
+                                    scaler=self.clf.scaler,
+                                    ystart=390, ystop=582,
+                                    scale=1,
+                                    img_size=img_size),
 
-                      HogSubSampler(classifier=self.clf.classifier,
-                                           features=self.ft,
-                                           scaler=self.clf.scaler,
-                                           ystart=400, ystop=592,
-                                           scale=1,
-                                           img_size=img_size),
-                      HogSubSampler(classifier=self.clf.classifier,
-                                           features=self.ft,
-                                           scaler=self.clf.scaler,
-                                           ystart=370, ystop=626,
-                                           scale=2,
-                                           img_size=img_size),
-                      HogSubSampler(classifier=self.clf.classifier,
-                                           features=self.ft,
-                                           scaler=self.clf.scaler,
-                                           ystart=380, ystop=636,
-                                           scale=2,
-                                           img_size=img_size)]
-
-
+                      HogSubSampler(classifier=self.clf2.classifier,
+                                    features=self.ft,
+                                    scaler=self.clf2.scaler,
+                                    ystart=400, ystop=592,
+                                    scale=1,
+                                    img_size=img_size),
+                      HogSubSampler(classifier=self.clf3.classifier,
+                                    features=self.ft,
+                                    scaler=self.clf3.scaler,
+                                    ystart=370, ystop=626,
+                                    scale=2,
+                                    img_size=img_size),
+                      HogSubSampler(classifier=self.clf4.classifier,
+                                    features=self.ft,
+                                    scaler=self.clf4.scaler,
+                                    ystart=380, ystop=636,
+                                    scale=2,
+                                    img_size=img_size)]
 
         # Heat map thresholding value
-        self.threshold = 4
+        self.threshold = 3
         # Bounding boxes of cars
         self.bboxes = None
         # Unthresholded heatmap
@@ -83,21 +85,19 @@ class CarFinder:
         """
 
         heatmap_temp = np.zeros((self.image_size[1], self.image_size[0]), dtype=np.float64)
-
+        # Loop through all sliding window searches.
         for hog in self.hoggs:
             heatmap_temp += hog.find(image)
 
-        # Store per frame results, do "weak" filtering. .i.e. remove single detections
         self.heatmap_raw  = heatmap_temp
         # Average heatmap
-        #self.heatmap_averaged.put(heatmap_temp.copy().astype(dtype=np.float32))
         # Put blurred version of raw heatmap to mean filter.
-        self.heatmap_averaged.put(cv2.GaussianBlur(self.heatmap_raw.copy(), (25, 25), 0))
+        self.heatmap_averaged.put(cv2.GaussianBlur(self.heatmap_raw.copy(), (41, 41), 0))
         # Threshold by setting all pixels below threshold limit to zero.
-        self.heatmap_threshold = self.heatmap_raw.copy()
-        self.heatmap_threshold[self.heatmap_averaged.mean() <= self.threshold] = 0
+        self.heatmap_threshold = self.heatmap_averaged.mean().copy()
+        self.heatmap_threshold[self.heatmap_threshold <= self.threshold] = 0
         # Generate labels and then bounding boxes
-        self.labels = label(self.heatmap_threshold)
+        self.labels = label(self.heatmap_threshold.copy())
         self.bboxes = self.labels_to_bboxes(self.labels)
 
     @staticmethod
@@ -139,47 +139,82 @@ class CarFinder:
             image = np.zeros(shape, dtype=np.uint8)
 
         for p in self.bboxes:
-            pt1 = tuple(p[0])
-            pt2 = tuple(p[1])
-            #print(pt1, pt2)
-            cv2.rectangle(image, pt1, pt2, color=color, thickness=thickness)
+            cv2.rectangle(image, tuple(p[0]), tuple(p[1]),
+                          color=color, thickness=thickness)
         return image
+
+    def pip_heatmap_per_frame(self, src, position, size):
+        """
+        Adds pip image of per-frame-heatmap to src image.
+        
+        :param src: Original image to where heatmap is added.
+        :param pos: Position of top left corner of subimage in image (x, y)
+        :param size: Size of the subimage (It'll be resized to this size) (x, y)
+        :return: combined image
+        """
+        # Draw per frame heatmap
+        heatmap = self.heatmap_raw.copy().astype(dtype=np.uint8)
+        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_GRAY2BGR)
+        heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_HOT) * 5
+        src = pip(src, heatmap, position, size, border=5,
+                  title="Per Frame Heatmap")
+        return src
+
+    def pip_heatmap_averaged(self, src, position, size):
+        """
+        Adds pip image of  averaged heatmap to src image.
+
+        :param src: Original image to where heatmap is added.
+        :param pos: Position of top left corner of subimage in image (x, y)
+        :param size: Size of the subimage (It'll be resized to this size) (x, y)
+        :return: combined image
+        """
+        # draw averaged heatmap
+        heatmap = self.heatmap_averaged.mean().astype(dtype=np.uint8)
+        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_GRAY2BGR) * 5
+        heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_HOT)
+        src = pip(src, heatmap, position, size, border=5,
+                  title="Average Heatmap")
+        return src
+
+    def pip_heatmap_threshold(self, src, position, size):
+        """
+        Adds pip image of heatmap threshold to src image.
+
+        :param src: Original image to where heatmap is added.
+        :param pos: Position of top left corner of subimage in image (x, y)
+        :param size: Size of the subimage (It'll be resized to this size) (x, y)
+        :return: combined image
+        """
+        heatmap = self.heatmap_threshold.copy().astype(dtype=np.uint8)
+        heatmap = cv2.cvtColor(heatmap, cv2.COLOR_GRAY2BGR) * 5
+        heatmap = cv2.applyColorMap(heatmap, cv2.COLORMAP_HOT)
+        src = pip(src, heatmap, position, size, border=5,
+                  title="Heatmap Threshold")
+        return src
+
+    def pip_labels(self, src, position, size):
+        """
+        Adds pip image of labels to src image.
+
+        :param src: Original image to where labels image is added.
+        :param pos: Position of top left corner of subimage in image (x, y)
+        :param size: Size of the subimage (It'll be resized to this size) (x, y)
+        :return: combined image
+        """
+        # Idiotic way to make labels visible
+        labels = carfinder.labels[0].copy().astype(dtype=np.uint8) * 20
+        labels = cv2.cvtColor(labels, cv2.COLOR_GRAY2BGR) * 10
+        # labels = cv2.applyColorMap(heat_thold, cv2.COLORMAP_HSV)
+        src = pip(src, labels, position, size, 5,
+                  "Labels")
+        return src
+
 
 if __name__ == "__main__":
     #import cv2
     import matplotlib.pyplot as plt
     from moviepy.editor import VideoFileClip
-
-
-    def pip(image, subimage, pos, size, border=5, title=""):
-        """
-        Adds sub image into image on given position and given size.
-
-        :param image: Image to where subimage is placed 
-        :param subimage: Image to be placed into image
-        :param pos: Position of top left corner of subimage in image (x, y)
-        :param size: Size of the subimage (It'll be resized to this size) (x, y)
-        :param border: thickness of black border around subimage
-        :return: combined image
-        """
-
-        # Coordinates of subimage
-        x_left = pos[0] + border  # move subimage amount of border
-        x_right = x_left + size[0]
-        y_top = pos[1] + border
-        y_bot = y_top + size[1]
-
-        image[y_top - border:y_bot + border,
-        x_left - border:x_right + border] = 0  # Cut black hole on left top corner
-        image[y_top:y_bot, x_left:x_right] = cv2.resize(subimage, size,
-                                                        interpolation=cv2.INTER_CUBIC)
-
-        if len(title) != 0:
-            cv2.putText(image, title, (x_left, y_top + 10),
-                        cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255))
-
-        return image
-
 
     if False:
         test_img = cv2.imread("./test_images/scene/test5.jpg")
@@ -189,7 +224,6 @@ if __name__ == "__main__":
         cv2.imshow('video', bboxes)
         cv2.waitKey(5000)
         cv2.destroyAllWindows()
-
 
     # Testing with video clip
     if True:
@@ -204,30 +238,16 @@ if __name__ == "__main__":
             bboxes = carfinder.draw_bounding_boxes(image)
 
             # Draw per frame heatmap
-            frame_heatmap = carfinder.heatmap_raw.copy().astype(dtype=np.uint8)
-            frame_heatmap = cv2.cvtColor(frame_heatmap, cv2.COLOR_GRAY2BGR)*15
-            bboxes = pip(bboxes, frame_heatmap, (10, 5), (213, 120), 5,
-                         "Per Frame Heatmap")
+            bboxes = carfinder.pip_heatmap_per_frame(bboxes, (10, 5), (213, 120))
 
             # draw averaged heatmap
-            avg_heat = carfinder.heatmap_averaged.mean()
-            avg_heat =  cv2.cvtColor(avg_heat.astype(dtype=np.uint8), cv2.COLOR_GRAY2BGR)*15
-            bboxes = pip(bboxes, avg_heat, (10, 150), (213, 120), 5,
-                         "Average Heatmap")
+            bboxes = carfinder.pip_heatmap_averaged(bboxes, (10, 150), (213, 120))
 
             # Draw heatmap threshold
-            heat_thold = carfinder.heatmap_threshold
-            heat_thold = cv2.cvtColor(heat_thold.astype(dtype=np.uint8),
-                                    cv2.COLOR_GRAY2BGR) * 15
-            bboxes = pip(bboxes, heat_thold, (250, 5), (213, 120), 5,
-                         "Heatmap Threshold")
+            bboxes = carfinder.pip_heatmap_threshold(bboxes, (250, 5), (213, 120))
 
             # Draw labels
-            labels = carfinder.labels[0]*20  # Idiotic way to make labels visible
-            labels = cv2.cvtColor(labels.astype(dtype=np.uint8),
-                                    cv2.COLOR_GRAY2BGR) * 15
-            bboxes = pip(bboxes, labels, (250, 150), (213, 120), 5,
-                         "Labels")
+            bboxes = carfinder.pip_labels(bboxes, (250, 150), (213, 120))
 
 
             cv2.imshow('video', bboxes)
