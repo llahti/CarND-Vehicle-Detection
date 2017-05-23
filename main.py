@@ -7,7 +7,7 @@ import numpy as np
 
 
 input_file = "project_video.mp4"
-output_file = "result_video_heavy_overlap.mp4"
+output_file = "augmented_project_video.mp4"
 
 # Open video clip
 clip = mpy.VideoFileClip(input_file)
@@ -31,30 +31,16 @@ def frame_generator(t):
     bboxes = cf.draw_bounding_boxes(frame)
 
     # Draw per frame heatmap
-    frame_heatmap = cf.heatmap_raw.copy().astype(dtype=np.uint8)
-    frame_heatmap = cv2.cvtColor(frame_heatmap, cv2.COLOR_GRAY2BGR) * 15
-    bboxes = utils.pip(bboxes, frame_heatmap, (10, 5), (213, 120), 5,
-                       "Per Frame Heatmap")
+    bboxes = cf.pip_heatmap_per_frame(bboxes, (10, 5), (213, 120))
 
     # draw averaged heatmap
-    avg_heat = cf.heatmap_averaged.mean()
-    avg_heat = cv2.cvtColor(avg_heat.astype(dtype=np.uint8),
-                            cv2.COLOR_GRAY2BGR) * 15
-    bboxes = utils.pip(bboxes, avg_heat, (10, 150), (213, 120), 5,
-                       "Average Heatmap")
+    bboxes = cf.pip_heatmap_averaged(bboxes, (10, 150), (213, 120))
 
     # Draw heatmap threshold
-    heat_thold = cf.heatmap_threshold
-    heat_thold = cv2.cvtColor(heat_thold.astype(dtype=np.uint8),
-                              cv2.COLOR_GRAY2BGR) * 15
-    bboxes = utils.pip(bboxes, heat_thold, (250, 5), (213, 120), 5,
-                       "Heatmap Threshold")
+    bboxes = cf.pip_heatmap_threshold(bboxes, (250, 5), (213, 120))
+
     # Draw labels
-    labels = cf.labels[0] * 20  # Idiotic way to make labels visible
-    labels = cv2.cvtColor(labels.astype(dtype=np.uint8),
-                          cv2.COLOR_GRAY2BGR) * 15
-    bboxes = utils.pip(bboxes, labels, (250, 150), (213, 120), 5,
-                       "Labels")
+    bboxes = cf.pip_labels(bboxes, (250, 150), (213, 120))
 
     # Need to convert from BGR to RGB to get colors right in video
     output_image = cv2.cvtColor(bboxes, cv2.COLOR_BGR2RGB)
