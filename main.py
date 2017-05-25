@@ -7,7 +7,7 @@ import numpy as np
 
 
 input_file = "project_video.mp4"
-output_file = "augmented_project_video.mp4"
+output_file = "./output_videos/augmented_project_video2.mp4"
 
 # Open video clip
 clip = mpy.VideoFileClip(input_file)

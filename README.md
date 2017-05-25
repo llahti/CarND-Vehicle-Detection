@@ -16,46 +16,6 @@ In this project I'll write a software pipeline to detect vehicles in a video.
 
 There are two videos given first one `test_video.mp4` which can be used to test pipeline. Second one `project_video.mp4` is the video on which will be evaluated and pipeline should be able to detect vehicles reliably on that video.
 
-Training images are split into **vehicle** and **non-vehicle** classes.
-
-
-
-
-<figure>
- <img src="./illustrations/vehicle_01.png" width="64" alt="Vehicle 01" />
- <figcaption>
- <p></p> 
- <p style="text-align: center;"> Example of Vehicle</p> 
- </figcaption>
-</figure>
-
-<figure>
- <img src="./illustrations/vehicle_02.png" width="64" alt="Vehicle 02" />
- <figcaption>
- <p></p> 
- <p style="text-align: center;"> Example of Another Vehicle</p> 
- </figcaption>
-</figure>
-
-<figure>
- <img src="./illustrations/non_vehicle_01.png" width="64" alt="Non Vehicle 01" />
- <figcaption>
- <p></p> 
- <p style="text-align: center;"> Example of Non Vehicle</p> 
- </figcaption>
-</figure>
-
-<figure>
- <img src="./illustrations/non_vehicle_02.png" width="64" alt="Non Vehicle 02" />
- <figcaption>
- <p></p> 
- <p style="text-align: center;"> Example of Another Non Vehicle</p> 
- </figcaption>
-</figure>
-
-
-
-
 ### Load Data
 
 I have created a helpful script which downloads training data from internet and unpacks it into `./data` directory
@@ -71,25 +31,27 @@ Those functions return features and labels and in this case feature is array of 
 
 Let's briefly check quantity, shape and type of data.
 
+>
+>    Small data set:
+>    	Number of vehicle images is 1196
+>    	Number of non-vehicle images is 1125
+>    	Shape of the image is  (64, 64, 3)
+>    	Datatype of image is  uint8
+>    
+>    
+>    Full data set:
+>    	Number of vehicle images is 8792
+>    	Number of non-vehicle images is 8968
+>    	Shape of the image is  (64, 64, 3)
+>    	Datatype of image is  uint8
+>
 
-```python
-import dataset
+### Examples of vehicles and non-vehicles
 
-dataset.print_statistics()
-```
+Training images are split into **vehicle** and **non-vehicle** classes.
 
-    Small data set:
-    	Number of vehicle images is 1196
-    	Number of non-vehicle images is 1125
-    	Shape of the image is  (64, 64, 3)
-    	Datatype of image is  uint8
-    
-    
-    Full data set:
-    	Number of vehicle images is 8792
-    	Number of non-vehicle images is 8968
-    	Shape of the image is  (64, 64, 3)
-    	Datatype of image is  uint8
+
+![png](./output_images/vehicles_non_vehicles.png)
 
 
 # Feature Selection
@@ -177,24 +139,17 @@ First iteration yield following results.
 
 
 
-Depending what is our focus we could select either the best one spatial binning which is 17x17. Now we now the region of best spatial binning and later we can run more fine grained tests.
+Depending what is our focus we could select either the best spatial binning which is 17x17. Now we now the region of best spatial binning and later we can run more fine grained tests.
 
 ### Visualization
 
 
-```python
-import visualize
-%matplotlib inline
-visualize.show_spatial_binning()
-```
-
-
-![png](output_5_0.png)
+![png](./output_images/spatial_binning.png)
 
 
 ## Color Histogram
 
-I made rought evaluation of color histogram size (number of bins). I used following number of bins on this rough evaluation (4, 16, 32, 64, 96) and results are in below table.
+I made rough evaluation of color histogram size (number of bins). I used following number of bins on this rough evaluation (4, 16, 32, 64, 96) and results are in below table.
 
 When calculating the color histogram it is important to remember that data range depends of data type and color space.
 E.g RGB images have data range **0..255** and **0..1** on **uint8** and **float** datatypes respectively.
@@ -287,14 +242,8 @@ Good choises could be for example 1st and 5th.
 ### Visualization
 
 
-```python
-import visualize
-%matplotlib inline
-visualize.show_color_histogram()
-```
 
-
-![png](output_7_0.png)
+![png](./output_images/color_histogram.png)
 
 
 ## Histogram of Oriented Gradient
@@ -398,14 +347,7 @@ Good choises to go are almost any of above choices, but i select the 4th one as 
 ### Visualization
 
 
-```python
-import visualize
-%matplotlib inline
-visualize.show_hog_features()
-```
-
-
-![png](output_9_0.png)
+![png](./output_images/hog_features.png)
 
 
 ## Final Feature Selection
@@ -667,8 +609,3 @@ Perhaps neuralnet based solution would improve car tracking pipeline?
 In visualization and debugging point of view i would like to implement features which provide more information such like strength or probability of detection.
 
 In the end i had to finetune features by hand in order to make detection more stable. This also made detection more slow.
-
-
-```python
-
-```
