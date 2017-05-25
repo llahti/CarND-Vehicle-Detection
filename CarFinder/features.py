@@ -91,9 +91,9 @@ class Features:
                  hist_nbins=256,
                  hist_channels=(0, 1, 2),
                  hog_channel=(0, 1, 2),
-                 hog_orient_nbins=18,
-                 hog_pix_per_cell=(16, 16),
-                 hog_cell_per_block=(3, 3),
+                 hog_orient_nbins=16,
+                 hog_pix_per_cell=(12, 12),
+                 hog_cell_per_block=(4, 4),
                  spatial_feat=True,
                  hist_feat=True,
                  hog_feat=True):
