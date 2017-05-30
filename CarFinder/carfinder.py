@@ -16,36 +16,43 @@ class CarFinder:
         self.clf2 = Classifier()
         self.clf3 = Classifier()
         self.clf4 = Classifier()
+        self.clf5 = Classifier()
         self.image_size = img_size
 
         self.hoggs = [HogSubSampler(classifier=self.clf.classifier,
                                     features=self.ft,
                                     scaler=self.clf.scaler,
-                                    ystart=390, ystop=582,
+                                    ystart=390, ystop=518,
                                     scale=1,
                                     img_size=img_size),
-
                       HogSubSampler(classifier=self.clf2.classifier,
                                     features=self.ft,
                                     scaler=self.clf2.scaler,
-                                    ystart=400, ystop=592,
+                                    ystart=380, ystop=500,
                                     scale=1,
                                     img_size=img_size),
                       HogSubSampler(classifier=self.clf3.classifier,
                                     features=self.ft,
                                     scaler=self.clf3.scaler,
-                                    ystart=370, ystop=626,
+                                    ystart=370, ystop=562,
                                     scale=2,
                                     img_size=img_size),
                       HogSubSampler(classifier=self.clf4.classifier,
                                     features=self.ft,
                                     scaler=self.clf4.scaler,
-                                    ystart=380, ystop=636,
+                                    ystart=380, ystop=572,
                                     scale=2,
-                                    img_size=img_size)]
+                                    img_size=img_size),
+                      HogSubSampler(classifier=self.clf5.classifier,
+                                    features=self.ft,
+                                    scaler=self.clf5.scaler,
+                                    ystart=350, ystop=720,
+                                    scale=3,
+                                    img_size=img_size)
+                      ]
 
         # Heat map thresholding value
-        self.threshold = 3
+        self.threshold = 3.5
         # Bounding boxes of cars
         self.bboxes = None
         # Unthresholded heatmap
@@ -66,7 +73,7 @@ class CarFinder:
         :param image_size: (x, y) 
         :return: None
         """
-        heatmap  = Averager(10, np.zeros((self.image_size[1], self.image_size[0]),dtype=np.float64), True)
+        heatmap  = Averager(5, np.zeros((self.image_size[1], self.image_size[0]),dtype=np.float64), True)
         return heatmap
 
     def pool_wrapper_hog_find(self, hog_idx, image):

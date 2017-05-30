@@ -20,10 +20,10 @@ import tqdm
 
 
 save_results = True
-filename = './model_selection/feature_results_temp.csv'
+filename = './model_selection/feature_results_for_article.csv'
 
 
-images, y = load_full()
+images, y = load_small()
 
 # Get different parameter combinations
 # Tweak these parameters and see how the results change.
@@ -34,13 +34,16 @@ images, y = load_full()
 combinations = create_parameter_combinations(input_cspace=('BGR',),
                                              target_cspace=['YCrCb'],
                                              #hog_orient_nbins=[4, 5, 6, 9, 12],
-                                             hog_orient_nbins=[6,],
-                                             #hog_pix_per_cell=[(8, 8), (10, 10), (12, 12), (15, 15), (17, 17)],
+                                             hog_orient_nbins=[8, 9, 10, 11, 12,
+                                                               13, 14, 15, 16,
+                                                               17, 18, 24, 32],
+                                             #hog_pix_per_cell=[(7, 7), (8, 8), (9, 9), (10, 10), (11, 11), (12,12), (13, 13), (14,14), (15, 15), (16, 16), (17, 17), (18, 18) ],
                                              hog_pix_per_cell=[(16, 16), ],
-                                             #hog_cell_per_block=[(3, 3), (4, 4), (5, 5), (6, 6)],
+                                             #hog_cell_per_block=[(2, 2), (3, 3), (4, 4), (5, 5), (6, 6)],
                                              hog_cell_per_block=[ (4, 4), ],
                                              spatial_binning_size=((12,12), (14,14), (15,15),  (16,16), (20, 20)),
-                                             hist_nbins=[16, 32, 64, 128, 256, ],
+                                             hist_nbins=[8, 16, 32, 64, 128,
+                                                         196, 256, ],
                                              hist_channels= ((0,), (1,), (2,), (0, 1), (0, 2), (1, 2), (0, 1, 2)),
                                              hog_channel=((0,), (1,), (2,), (0, 1), (0, 2), (1, 2), (0, 1, 2)),
                                              hog_feat=[False, ],
@@ -49,17 +52,18 @@ combinations = create_parameter_combinations(input_cspace=('BGR',),
 
 
 combinations = create_parameter_combinations(input_cspace=('BGR',),
-                                             target_cspace=('YCrCb',),
-                                             hog_orient_nbins=[12, 16, 18, 24],
-                                             hog_pix_per_cell=[ (10,10), (12,12) ],
-                                             hog_cell_per_block=[ (3,3), (4,4) ],
-                                             spatial_binning_size=((15,15), (16,16), (24,24), (32,32)  ),
-                                             hist_nbins=[256,],
-                                             hist_channels= ( (0, 1, 2),),
+                                             target_cspace=('HLS', 'HSV', 'LAB', 'LUV',  'YCrCb', 'YUV'),
+                                             hog_orient_nbins=[32,],
+                                             hog_pix_per_cell=[(8, 8),],
+                                             hog_cell_per_block=[(2, 2), ],
+                                             #spatial_binning_size=((8, 8), (10, 10), (15, 15), (16,16), (24,24), (32,32), (48, 48), (64, 64)),
+                                             spatial_binning_size=((32,32),),
+                                             hist_nbins=[8, 16, 32, 64, 128, 196, 256,],
+                                             hist_channels=((0,), (1,), (2,), (0, 1), (0, 2), (1, 2), (0, 1, 2)),
                                              hog_channel=((0, 1, 2), ),
                                              hog_feat=[True, ],
-                                             hist_feat=[True,],
-                                             spatial_feat=[True,])
+                                             hist_feat=[True, ],
+                                             spatial_feat=[True, ])
 
 # Create result table with indexes from combination tables
 results = pd.DataFrame(index=combinations.index, columns=('training_time', 'test_time', 'n_train', 'n_test', 'score', 'feat_vect_length','error', 'error_msg'))
@@ -90,10 +94,10 @@ for i in tqdm.tqdm(range(len(combinations))):
 
 
         # Split up data into randomized training and test sets
-        rand_state = 888
-        X_train, X_test, y_train, y_test = train_test_split(
-            scaled_X, y, test_size=0.5, random_state=rand_state)
-        sss = StratifiedShuffleSplit(n_splits=3, test_size=0.5, random_state=888)
+        #rand_state = 888
+        #X_train, X_test, y_train, y_test = train_test_split(
+        #    scaled_X, y, test_size=0.5, random_state=rand_state)
+        sss = StratifiedShuffleSplit(n_splits=3, test_size=0.3, random_state=888)
 
         # Use a linear SVC
         #svc = LinearSVC()
@@ -102,25 +106,28 @@ for i in tqdm.tqdm(range(len(combinations))):
 
 
         # Check the training time for the SVC
-        start_training = time.time()
-        svc.fit(X_train, y_train)
-        end_training = time.time()
+        #start_training = time.time()
+        #svc.fit(X_train, y_train)
+        #end_training = time.time()
 
         # Check the score of the SVC (Only used as timing purposes)
-        fit_score = svc.score(X_test, y_test)
+        #fit_score = svc.score(X_test, y_test)
 
         # Check the prediction time for a single sample
-        end_prediction = time.time()
+        #end_prediction = time.time()
 
         # Calculate cross valitated score (this is more reliable way)
         score = cross_val_score(svc, scaled_X, y, cv=sss, n_jobs=8).mean()
 
         # ('training_time', 'test_time', 'n_train', 'n_test' 'score', 'error', 'error_msg'))
-        results.iloc[i] = [(end_training-start_training), (end_prediction-end_training), len(X_train), len(X_test), score, len(features[1]), False, ""]
+        #results.iloc[i] = [(end_training-start_training), (end_prediction-end_training), len(X_train), len(X_test), score, len(features[1]), False, ""]
+        results.iloc[i] = [0,
+                           0, 0,
+                           0, score, len(features[1]), False, ""]
 
     except Exception as e:
-       results.iloc[i] = [None, None, None, None, None, None, True, e]
-       print(e)
+        results.iloc[i] = [None, None, None, None, None, None, True, e]
+        print(e)
 
     # Save results every Nth iteration
     if ((i % 50) == 0) & save_results:

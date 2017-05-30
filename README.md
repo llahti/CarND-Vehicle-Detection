@@ -12,6 +12,10 @@ In this project I'll write a software pipeline to detect vehicles in a video.
 * Run your pipeline on a video stream (start with the test_video.mp4 and later implement on full project_video.mp4) and create a heat map of recurring detections frame by frame to reject outliers and follow detected vehicles.
 * Estimate a bounding box for vehicles detected.
 
+# Quick Start
+
+Run `main.py` to generate augmented video.
+
 # Data Exploration
 
 There are two videos given first one `test_video.mp4` which can be used to test pipeline. Second one `project_video.mp4` is the video on which will be evaluated and pipeline should be able to detect vehicles reliably on that video.
@@ -600,12 +604,12 @@ If we think about the problems of now implemented pipeline then clearly there co
 1. Speed 
 2. Reliability.
 
-Unfortunately somehow i didn't get parallel processing to work with video (Note that it worked with single images and improved speed remarkably). I tried to use pythons Pool-workers from multithreading module.
+Unfortunately somehow i didn't get parallel processing to work with video (Note that it worked with single images and improved speed remarkably). I tried to use pythons Pool-workers from multi-threading module.
 
 Reliability is issue too because current pipeline may not be able to remove all false detections. Also i noticed that in some situations there might be risk that car is not detected. Actually that risk realized during the optimization phase when classifier couldn't anymore detect black car in the video. 
 
-Perhaps neuralnet based solution would improve car tracking pipeline?
-
 In visualization and debugging point of view i would like to implement features which provide more information such like strength or probability of detection.
 
-In the end i had to finetune features by hand in order to make detection more stable. This also made detection more slow.
+In the end i had to fine tune features by hand in order to make detection more stable. This also made detection more slow.
+
+Next steps would be to try out YOLO or SSD for object detection.

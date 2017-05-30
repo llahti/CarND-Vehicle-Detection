@@ -25,11 +25,12 @@ class Features:
                               'HSV': ((0, 360), (0, 1), (0, 1)),
                               # specifically for YCrCb444, but should work for 422 and 420
                               'YCrCb': ((0, 255), (0, 255), (0, 255)),
-                              'LUV': ((0, 100), (-134, 220), (-140, 122))
+                              'LUV': ((0, 100), (-134, 220), (-140, 122),),
+                              'YUV': ((0, 1), (0, 1), (0, 1))
                              }
 
     # Supported colorspaces
-    supported_color_spaces = ('BGR', 'HLS', 'HSV', 'LAB', 'LUV', 'RGB', 'YCrCb')
+    supported_color_spaces = ('BGR', 'HLS', 'HSV', 'LAB', 'LUV', 'RGB', 'YCrCb', 'YUV')
 
     # This dictionary is mapping of input and target colorspaces to cv2.COLOR_*
     # colorspace conversion constants.
@@ -40,14 +41,16 @@ class Features:
                                           'LAB': cv2.COLOR_RGB2LAB,
                                           'LUV': cv2.COLOR_RGB2LUV,
                                           'BGR': cv2.COLOR_RGB2BGR,
-                                          'YCrCb': cv2.COLOR_RGB2YCrCb},
+                                          'YCrCb': cv2.COLOR_RGB2YCrCb,
+                                          'YUV': cv2.COLOR_RGB2YUV},
                                   'BGR': {'RGB': cv2.COLOR_BGR2RGB,
                                           'HSV': cv2.COLOR_BGR2HSV,
                                           'HLS': cv2.COLOR_BGR2HLS,
                                           'LAB': cv2.COLOR_BGR2LAB,
                                           'LUV': cv2.COLOR_BGR2LUV,
                                           'BGR': None,
-                                          'YCrCb': cv2.COLOR_BGR2YCrCb},
+                                          'YCrCb': cv2.COLOR_BGR2YCrCb,
+                                          'YUV': cv2.COLOR_BGR2YUV},
                                   'HSV': {'RGB': cv2.COLOR_HSV2RGB,
                                           'HSV': None,
                                           'HLS': None,
@@ -83,6 +86,13 @@ class Features:
                                             'LUV': None,
                                             'BGR': cv2.COLOR_YCrCb2BGR,
                                             'YCrCb': None},
+                                  'YUV': {'RGB': cv2.COLOR_YUV2RGB,
+                                          'HSV': None,
+                                          'HLS': None,
+                                          'LAB': None,
+                                          'LUV': None,
+                                          'BGR': cv2.COLOR_YUV2BGR,
+                                          'YCrCb': None},
                                   }
 
     def __init__(self, input_cspace='BGR',
