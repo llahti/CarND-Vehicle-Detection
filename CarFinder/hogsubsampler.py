@@ -1,7 +1,8 @@
 from CarFinder.features import Features
-from obsolete.lesson_functions import *
 from skimage.feature import hog
 from multiprocessing import Pool
+import cv2
+import numpy as np
 
 
 class HogSubSampler:
@@ -152,37 +153,45 @@ class HogSubSampler:
                                                 hist_features,
                                                 hog_features)).reshape(-1)
 
-                # Save feature vector bounding box parameters for later batch processing
-                feature_vectors.append(test_features)
-                parameters.append({'xbox_left': np.int(xleft * self.scale),
-                                   'ytop_draw': np.int(ytop * self.scale),
-                                   'win_draw': np.int(window * self.scale)})
+                # Generate parameter arrays for pool worker
+                parameters.append([self.clf, self.scaler, test_features,
+                                   self.ystart, np.int(xleft * self.scale),
+                                   np.int(ytop * self.scale),
+                                   np.int(window * self.scale)])
 
+        with Pool() as pool:
+            result = pool.starmap_async(self._predict, parameters,chunksize=30)
+            bboxes = []
+            # Combine results into a list of bounding boxes.
+            for res in result.get():
+                if res is not None:
+                    bboxes.append(res)
+            self.bboxes = np.array(bboxes)
 
-        #with Pool(processes=4) as pool:
-        # TODO: Convert below prediction code and bounding box code into a function
-        #       Which can be called by pool workers.
-        # Convert to numpy array for easier data conversion
-        test_features = np.array(feature_vectors)
-        test_features = test_features.astype(dtype=np.float64)
-        # Scale and predict all feature vectors
-        test_features = self.scaler.transform(test_features)
-        test_prediction = self.clf.predict(test_features)
-
-        # Create bounding box for each positive detection
-        for i, pred in enumerate(test_prediction):
-            if pred == 1:
-                p = parameters[i]
-                xbox_left = p['xbox_left']
-                ytop_draw = p['ytop_draw']
-                win_draw =  p['win_draw']
-                pt1 = (xbox_left, ytop_draw + self.ystart)
-                pt2 = (xbox_left + win_draw, ytop_draw + win_draw + self.ystart)
-                bboxes.append(np.array((pt1, pt2)))
-
-        self.bboxes = np.array(bboxes)
         hmap = self.heat_map()
         return hmap
+
+    @staticmethod
+    def _predict(classifier, scaler, feature_vector, ystart, xbox_left, ytop_draw, win_draw):
+        """This function is used in find() as a pool worker."""
+        if len(feature_vector.shape) != 1:
+           raise Exception("Only single feature vectors are supported at the moment. I.E 1D array.")
+        test_features = np.array(feature_vector).reshape(1, -1)
+        test_features = test_features.astype(dtype=np.float64)
+
+        # Scale and predict all feature vectors
+        test_features = scaler.transform(test_features)
+        test_prediction = classifier.predict(test_features)
+
+        # Create bounding box for each positive detection
+        if test_prediction[0] == 1:
+            pt1 = (xbox_left, ytop_draw + ystart)
+            pt2 = (
+                xbox_left + win_draw, ytop_draw + win_draw + ystart)
+            return pt1, pt2
+        else:
+            return None
+
 
     def draw_bounding_boxes(self, image=None, color=(0, 0, 255), thickness=3):
         """
@@ -226,14 +235,14 @@ if __name__ == "__main__":
     from CarFinder.classifier import Classifier
     import matplotlib.pyplot as plt
     import time
-    test_img = cv2.imread("./test_images/scene/test3.jpg")
+    test_img = cv2.imread("./test_images/scene/test1.jpg")
 
     f = Features()
     c = Classifier()
 
     ystart=380
-    height=128
-    scale=1
+    height=300
+    scale=0.8
     ### Change parameters above
     hogss = HogSubSampler(c.classifier, f, c.scaler, ystart=ystart,
                           ystop=ystart+height, scale=scale)

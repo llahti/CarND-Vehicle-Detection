@@ -66,3 +66,34 @@ def load_test_images():
     print("Totally loaded {} images to training set".format(len(labels)))
 
     return images, labels
+
+
+def pip(image, subimage, pos, size, border=5, title=""):
+    """
+    Adds sub image into image on given position and given size.
+
+    :param image: Image to where subimage is placed 
+    :param subimage: Image to be placed into image
+    :param pos: Position of top left corner of subimage in image (x, y)
+    :param size: Size of the subimage (It'll be resized to this size) (x, y)
+    :param border: thickness of black border around subimage
+    :param title: Title of pip window (shown on upper left corner of pip window)
+    :return: combined image
+    """
+
+    # Coordinates of subimage
+    x_left = pos[0] + border  # move subimage amount of border
+    x_right = x_left + size[0]
+    y_top = pos[1] + border
+    y_bot = y_top + size[1]
+
+    image[y_top - border:y_bot + border,
+    x_left - border:x_right + border] = 0  # Cut black hole on left top corner
+    image[y_top:y_bot, x_left:x_right] = cv2.resize(subimage, size,
+                                                    interpolation=cv2.INTER_CUBIC)
+
+    if len(title) != 0:
+        cv2.putText(image, title, (x_left, y_top + 10),
+                    cv2.FONT_HERSHEY_COMPLEX, 0.5, (255, 255, 255))
+
+    return image

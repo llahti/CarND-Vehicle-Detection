@@ -3,3 +3,5 @@
 data/
 .ipynb_checkpoints/
 .directory
+*__pycache__/
+#CarFinder/__pycache__/
