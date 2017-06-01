@@ -594,7 +594,7 @@ HOG feature generation seems to be quite resource hungry operation so let's see 
 
 # Video
 
-Annotated video can be found from [here](./augmented_project_video.mp4).
+Annotated video can be found from [here](https://youtu.be/4srt6KxRGI8).
 
 # Discussion
 
